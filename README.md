@@ -12,10 +12,10 @@ I want a USB interface, and USB FS can do 12 mbps. So that means I should be abl
 
 So I should be able to run smooth video on a 8192 LED setup without even diving into high speed USB.
 
-For some reason, most simple drivers can't come close to these specs. Respect for the (Pixel Pusher)[http://www.heroicrobotics.com/products/pixelpusher] though, its just large, expensive, and uses Ethernet.
+For some reason, most simple drivers can't come close to these specs. Respect for the [Pixel Pusher](http://www.heroicrobotics.com/products/pixelpusher) though, it's just large, expensive, and uses Ethernet.
 
 ## How?
-I think I can trick the STM32F105 into doing this for me. It's gonna take a lot of fiddling with the DMA engine, but I'm confident I can extend the approach (here)[https://github.com/ervanalb/lux/blob/master/led_strip_firmware/app/src/ws2811_strip.c] to 8 channels (that example works plenty fast on a F0 at 48 MHz).
+I think I can trick the STM32F105 into doing this for me. It's gonna take a lot of fiddling with the DMA engine, but I'm confident I can extend the approach [here](https://github.com/ervanalb/lux/blob/master/led_strip_firmware/app/src/ws2811_strip.c) to 8 channels (that example works plenty fast on a F0 at 48 MHz).
 
 ## Anything else?
 Why yes, thanks for asking.
