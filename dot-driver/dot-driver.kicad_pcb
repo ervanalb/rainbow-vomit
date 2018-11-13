@@ -2,7 +2,7 @@
 
   (general
     (thickness 1.6)
-    (drawings 36)
+    (drawings 38)
     (tracks 461)
     (zones 0)
     (modules 60)
@@ -87,9 +87,9 @@
       (subtractmaskfromsilk false)
       (outputformat 1)
       (mirror false)
-      (drillshape 1)
+      (drillshape 0)
       (scaleselection 1)
-      (outputdirectory ""))
+      (outputdirectory "gerber/"))
   )
 
   (net 0 "")
@@ -2356,6 +2356,12 @@
     )
   )
 
+  (gr_text "8ch driver\nrev 1\nby Eric Van Albert" (at 154.305 94.615 90) (layer B.SilkS) (tstamp 5BEA461F)
+    (effects (font (size 0.7 0.7) (thickness 0.15)) (justify mirror))
+  )
+  (gr_text "Rainbow Vomit" (at 151.765 94.615 90) (layer B.SilkS)
+    (effects (font (size 1 1) (thickness 0.2)) (justify mirror))
+  )
   (gr_text GND (at 130.048 116.967) (layer B.SilkS) (tstamp 5BEA5C2B)
     (effects (font (size 1 1) (thickness 0.2)) (justify mirror))
   )
@@ -2905,7 +2911,7 @@
   (segment (start 155.17 100.9664) (end 155.1686 100.965) (width 0.2) (layer F.Cu) (net 70))
   (segment (start 155.17 102.87) (end 155.17 100.9664) (width 0.2) (layer F.Cu) (net 70))
 
-  (zone (net 1) (net_name GND) (layer B.Cu) (tstamp 0) (hatch edge 0.508)
+  (zone (net 1) (net_name GND) (layer B.Cu) (tstamp 5BEA46AB) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.2)
     (fill yes (arc_segments 16) (thermal_gap 0.508) (thermal_bridge_width 0.508))
@@ -3286,7 +3292,7 @@
       )
     )
   )
-  (zone (net 3) (net_name +3V3) (layer F.Cu) (tstamp 0) (hatch edge 0.508)
+  (zone (net 3) (net_name +3V3) (layer F.Cu) (tstamp 5BEA46A8) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.2)
     (fill yes (arc_segments 16) (thermal_gap 0.508) (thermal_bridge_width 0.508))
