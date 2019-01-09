@@ -4,6 +4,7 @@ BUILD_DIR = bin
 CFILES =  src/main.c
 CFILES += src/hal.c
 CFILES += src/protocol.c
+CFILES += src/output.c
 
 INCLUDES += -Isrc
 

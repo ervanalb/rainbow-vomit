@@ -1,4 +1,5 @@
 #include "protocol.h"
+#include "output.h"
 
 static int command_byte;
 // -2 indicates uninitialized state (bytes will be discarded)
@@ -8,6 +9,8 @@ static int command_byte;
 static uint8_t cobs_remaining;
 // Flag indicating whether or not a zero byte is due at the end of this COBS block
 static uint8_t cobs_add_zero;
+
+static int channel_index;
 
 // Prepare COBS decoder for the start of a new block
 static void reset_cobs_decoder(void) {
@@ -30,9 +33,19 @@ static int cobs_decode(uint8_t src) {
     return src;
 }
 
+static void next_output_channel(void) {
+    for (; channel_index < OUTPUT_CHANNEL_COUNT; channel_index++) {
+        if (output_length[channel_index] > 0) return;
+    }
+    command_byte = -2; // Discard remaining bytes
+}
+
 static void packet_start(void) {
     switch (command_byte) {
         case 0x00:
+            output_clear();
+            channel_index = 0;
+            next_output_channel();
             break;
         default:
             break;
@@ -42,6 +55,12 @@ static void packet_start(void) {
 static void packet_rx(uint8_t b) {
     switch (command_byte) {
         case 0x00:
+            output_buffer[channel_index][output_length_filled[channel_index]] = command_byte;
+            output_length_filled[channel_index]++;
+            if (output_length_filled[channel_index] >= output_length[channel_index]) {
+                channel_index++;
+                next_output_channel();
+            }
             (void)b;
             break;
         default:
@@ -52,6 +71,7 @@ static void packet_rx(uint8_t b) {
 static void packet_done(void) {
     switch (command_byte) {
         case 0x00:
+            output_write();
             break;
         default:
             break;
