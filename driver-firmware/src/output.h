@@ -10,8 +10,8 @@ struct output_channel {
     int length_filled;
 };
 
-extern struct output_channel *output_front_channel;
-extern struct output_channel *output_back_channel;
+extern struct output_channel *output_channel;
 
 void output_init(void);
+void output_clear(void);
 void output_write(void);

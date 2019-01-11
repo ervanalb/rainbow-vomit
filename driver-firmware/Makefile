@@ -6,6 +6,8 @@ CFILES += src/hal.c
 CFILES += src/protocol.c
 CFILES += src/output.c
 
+LDFLAGS += -Xlinker -Map=$(PROJECT).map
+
 INCLUDES += -Isrc
 
 DEVICE=stm32f105r8t6
