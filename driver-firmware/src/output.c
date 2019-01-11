@@ -1,20 +1,36 @@
 #include "output.h"
 
-uint8_t output_buffer[OUTPUT_CHANNEL_COUNT][OUTPUT_CHANNEL_BUFFER_SIZE];
-int output_length[OUTPUT_CHANNEL_COUNT];
-int output_length_filled[OUTPUT_CHANNEL_COUNT];
+// Data is written into the back buffer
+// and displayed from the front buffer.
 
-void output_clear(void) {
+static struct output_channel output_channel_buffers[2][OUTPUT_CHANNEL_COUNT];
+struct output_channel *output_back_channel;
+struct output_channel *output_front_channel;
+
+void output_init(void) {
+    output_back_channel = output_channel_buffers[0];
     for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
-        output_length_filled[i] = 0;
+        output_back_channel[i].length = OUTPUT_CHANNEL_BUFFER_SIZE;
+        output_back_channel[i].length_filled = 0;
     }
 }
 
-void output_init(void) {
+// Called right before display starts,
+// so that the front channel has the latest data.
+static void flip(void) {
+    if (output_back_channel == output_channel_buffers[0]) {
+        output_back_channel = output_channel_buffers[1];
+        output_front_channel = output_channel_buffers[0];
+    } else {
+        output_back_channel = output_channel_buffers[0];
+        output_front_channel = output_channel_buffers[1];
+    }
     for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
-        output_length[i] = OUTPUT_CHANNEL_BUFFER_SIZE;
+        output_back_channel[i].length = output_front_channel[i].length;
+        output_back_channel[i].length_filled = 0;
     }
 }
 
 void output_write(void) {
+    flip();
 }

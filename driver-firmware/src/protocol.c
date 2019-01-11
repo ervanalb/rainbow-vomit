@@ -35,7 +35,7 @@ static int cobs_decode(uint8_t src) {
 
 static void next_output_channel(void) {
     for (; channel_index < OUTPUT_CHANNEL_COUNT; channel_index++) {
-        if (output_length[channel_index] > 0) return;
+        if (output_back_channel[channel_index].length > 0) return;
     }
     command_byte = -2; // Discard remaining bytes
 }
@@ -43,7 +43,6 @@ static void next_output_channel(void) {
 static void packet_start(void) {
     switch (command_byte) {
         case 0x00:
-            output_clear();
             channel_index = 0;
             next_output_channel();
             break;
@@ -55,14 +54,16 @@ static void packet_start(void) {
 static void packet_rx(uint8_t b) {
     switch (command_byte) {
         case 0x00:
-            output_buffer[channel_index][output_length_filled[channel_index]] = command_byte;
-            output_length_filled[channel_index]++;
-            if (output_length_filled[channel_index] >= output_length[channel_index]) {
+        {
+            struct output_channel *c = &output_back_channel[channel_index];
+            c->buffer[c->length_filled] = b;
+            c->length_filled++;
+            if (c->length_filled >= c->length) {
                 channel_index++;
                 next_output_channel();
             }
-            (void)b;
             break;
+        }
         default:
             break;
     }
