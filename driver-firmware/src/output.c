@@ -1,4 +1,9 @@
 #include "output.h"
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/dma.h>
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/cm3/nvic.h>
 
 #define PULSE_PERIOD 61
 #define PULSE_WIDTH_0 18
@@ -31,67 +36,39 @@ void output_init(void) {
     }
 
     // Set up hardware
-    GPIO_InitTypeDef GPIO_InitStruct;
-    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
-    TIM_OCInitTypeDef TIM_OCInitStruct;
-    NVIC_InitTypeDef NVIC_InitStruct;
-    DMA_InitTypeDef DMA_InitStructure;
 
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+    rcc_periph_clock_enable(RCC_TIM2);
+    rcc_periph_clock_enable(RCC_GPIOC);
 
     // Pulses out to strip
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB,&GPIO_InitStruct);
-    GPIO_PinAFConfig(GPIOB,GPIO_PinSource5,GPIO_AF_1);
+    gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, GPIO3);
+    gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, AFIO_MAPR_TIM2_REMAP_FULL_REMAP);
 
-    // TIM3 CH2
-    TIM_TimeBaseInitStruct.TIM_Prescaler = 0;
-    TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInitStruct.TIM_Period = PULSE_PERIOD;
-    TIM_TimeBaseInitStruct.TIM_ClockDivision = 0;
-    TIM_TimeBaseInitStruct.TIM_RepetitionCounter = 0;
-    TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStruct);
+    // TIM2 CH2
+    //timer_reset(TIM2);
+    timer_set_period(TIM2, PULSE_PERIOD);
+    timer_set_oc_mode(TIM2, TIM_OC2, TIM_OCM_PWM2);
+    timer_enable_oc_output(TIM2, TIM_OC2);
 
-    TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM2;
-    TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OCInitStruct.TIM_OutputNState = TIM_OutputNState_Disable;
-    TIM_OCInitStruct.TIM_Pulse = 0;
-    TIM_OCInitStruct.TIM_OCPolarity = TIM_OCPolarity_Low;
-    TIM_OCInitStruct.TIM_OCIdleState = TIM_OCIdleState_Reset;
-    TIM_OCInitStruct.TIM_OCNPolarity = TIM_OCNPolarity_Low;
-    TIM_OCInitStruct.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
+    timer_enable_break_main_output(TIM2);
+    timer_set_dma_on_update_event(TIM2);
+    timer_enable_counter(TIM2);
 
-    TIM_OC2Init(TIM3, &TIM_OCInitStruct);
-    TIM_CtrlPWMOutputs(TIM3, ENABLE);
-    TIM_DMACmd(TIM3, TIM_DMA_Update, ENABLE);
-    TIM_Cmd(TIM3, ENABLE);
+    // DMA - TIM2_UP
+    dma_channel_reset(DMA1, 2);
+    dma_set_peripheral_address(DMA1, 2, (uint32_t)&(TIM2_CCR2));
+    dma_set_memory_address(DMA1, 2, (uint32_t)pulse_buffer);
+    dma_set_read_from_memory(DMA1, 2);
+    dma_set_number_of_data(DMA1, 2, PULSE_BUFFER_LENGTH);
+    dma_set_peripheral_size(DMA1, 2, DMA_CCR_PSIZE_16BIT);
+    dma_set_memory_size(DMA1, 2, DMA_CCR_PSIZE_8BIT);
+    dma_enable_memory_increment_mode(DMA1, 2);
+    dma_enable_circular_mode(DMA1, 2);
 
-    // DMA - TIM3_UP
-    DMA_DeInit(DMA1_Channel3);
-    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(TIM3->CCR2));
-    DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)pulse_buffer;
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-    DMA_InitStructure.DMA_BufferSize = PULSE_BUFFER_LENGTH;
-    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-    DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
-    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-    DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-    DMA_Init(DMA1_Channel3, &DMA_InitStructure);
+    nvic_enable_irq(NVIC_DMA1_CHANNEL2_IRQ);
 
-    // NVIC
-    NVIC_InitStruct.NVIC_IRQChannel = DMA1_Channel2_3_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 0;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStruct);
-
-    DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, ENABLE);
+    dma_enable_half_transfer_interrupt(DMA1, 2);
+    dma_enable_transfer_complete_interrupt(DMA1, 2);
 }
 
 void output_clear(void) {
@@ -117,7 +94,7 @@ static void flip(void) {
 }
 
 void output_write(void) {
-    while (!(DMA1_Channel3->CCR & DMA_CCR_EN));
+    while (!(DMA_CCR(DMA2, 2) & DMA_CCR_EN));
     flip();
 
     data_pointer = output_display_channel[0].buffer;
@@ -128,10 +105,8 @@ void output_write(void) {
         pulse_buffer[i] = 0;
     }
 
-    DMA_ClearFlag(DMA1_FLAG_TC3);
-    DMA_ClearFlag(DMA1_FLAG_HT3);
-    DMA_SetCurrDataCounter(DMA1_Channel3,PULSE_BUFFER_LENGTH);
-    DMA_Cmd(DMA1_Channel3, ENABLE);
+    dma_clear_interrupt_flags(DMA1, 2, DMA_TCIF | DMA_HTIF);
+    dma_enable_channel(DMA1, 2);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -166,7 +141,7 @@ static void fill_dma_buffer(uint8_t* start, int len)
             if(!reset_counter)
             {
                 // Disable DMA
-                DMA1_Channel3->CCR &= (uint16_t)(~DMA_CCR_EN);
+                DMA_CCR(DMA2, 2) &= (uint16_t)(~DMA_CCR_EN);
             }
             else
             {
@@ -176,17 +151,17 @@ static void fill_dma_buffer(uint8_t* start, int len)
     }
 }
 
-void DMA1_Channel2_3_IRQHandler(void)
+void dma1_channel2_isr(void)
 {
-    if(DMA1->ISR & DMA1_IT_HT3)
+    if(DMA1_ISR & DMA_ISR_HTIF2)
     {
-        fill_dma_buffer(pulse_buffer,PULSE_BUFFER_LENGTH/2);
-        DMA1->IFCR = DMA1_IT_HT3;
+        fill_dma_buffer(pulse_buffer, PULSE_BUFFER_LENGTH / 2);
+        DMA1_IFCR = DMA_ISR_HTIF2;
     }
 
-    if(DMA1->ISR & DMA1_IT_TC3)
+    if(DMA1_ISR & DMA_ISR_TCIF2)
     {
-        fill_dma_buffer(pulse_buffer+PULSE_BUFFER_LENGTH/2,PULSE_BUFFER_LENGTH/2);
-        DMA1->IFCR = DMA1_IT_TC3;
+        fill_dma_buffer(pulse_buffer + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2);
+        DMA1_IFCR = DMA_ISR_TCIF2;
     }
 }
