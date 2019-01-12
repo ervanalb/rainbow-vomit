@@ -24,7 +24,10 @@ CMD_LENGTHS = 0x01
 
 if __name__ == "__main__":
     import time
-    while True:
-        for i in range(0, 255):
-            f = bytes([0] * 49 * 3 + [i, 0, 0])
-            send_command(CMD_FRAME, f)
+    i = 255
+    #while True:
+        #for i in range(256):
+    f = bytes([i, 0, 0] + [0, 0, 0] * 49)
+    send_command(CMD_FRAME, f)
+    f = bytes([0, i, 0] + [0, 0, 0] * 49)
+    send_command(CMD_FRAME, f)
