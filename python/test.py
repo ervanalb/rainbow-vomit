@@ -27,15 +27,17 @@ def set_lengths(lengths):
     send_command(CMD_LENGTHS, struct.pack("8H", *lengths))
 
 if __name__ == "__main__":
-    set_lengths([12, 12, 0, 0, 0, 0, 12, 12])
+    #set_lengths([12, 12, 0, 0, 0, 0, 12, 12])
+    set_lengths([3, 3, 3, 3, 3, 3, 3, 3])
 
     #import time
     #i = 255
     while True:
         #for i in range(256):
         f = b''
-        for ch in range(4):
-            color = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]][ch]
-            f += bytes(color * 4)
+        for ch in range(8):
+            color = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]]
+            color += [[255, 0, 255], [0, 255, 255], [10, 10, 10], [255, 255, 255]]
+            f += bytes(color[ch])
         print(f)
         send_command(CMD_FRAME, f)
