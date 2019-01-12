@@ -129,6 +129,7 @@ static void flip(void) {
 
 void output_write(void) {
     // Wait for both DMA channels to be idle
+    hal_set_led(3);
     for (;;) {
         int t;
         for (t = 0; t < TIMER_COUNT; t++) {
@@ -136,6 +137,7 @@ void output_write(void) {
         }
         if (t >= TIMER_COUNT) break;
     }
+    hal_clear_led(3);
 
     flip();
 
@@ -190,12 +192,30 @@ static inline __attribute__((always_inline)) void fill_dma_buffer(uint8_t* start
     int len_per_channel = len / 4;
     for (int c = 0; c < 4; c++) {
         uint8_t *cur = start + c;
-        for (int i = 0; i < len_per_channel; i += 8) {
+        for (int i = 0; i < len_per_channel / 8; i++) {
             if (byte_counter[c + offset]) {
-                for (int b = 7; b >= 0; b--) {
-                    *cur = (*(data_pointer[c + offset]) & (1 << b)) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                    cur += 4;
-                }
+                int datum = *(data_pointer[c + offset]);
+                //for (int b = 0; b < 8; b++) {
+                //    *cur = (datum & 0x80) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                //    datum <<= 1;
+                //    cur += 4;
+                //}
+                *cur = (datum & 0x80) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 4;
+                *cur = (datum & 0x40) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 4;
+                *cur = (datum & 0x20) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 4;
+                *cur = (datum & 0x10) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 4;
+                *cur = (datum & 0x08) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 4;
+                *cur = (datum & 0x04) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 4;
+                *cur = (datum & 0x02) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 4;
+                *cur = (datum & 0x01) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 4;
                 data_pointer[c + offset]++;
                 byte_counter[c + offset]--;
             } else {
@@ -214,6 +234,7 @@ static inline __attribute__((always_inline)) void fill_dma_buffer(uint8_t* start
 static volatile uint32_t a;
 
 void dma1_channel2_isr(void) {
+    hal_set_led(0);
     if (!reset_counter[0] && !reset_counter[1]
      && !reset_counter[2] && !reset_counter[3]) {
         // Need to ensure the DMA gets written one last time
@@ -232,15 +253,15 @@ void dma1_channel2_isr(void) {
     if (DMA1_ISR & DMA_ISR_HTIF2) {
         fill_dma_buffer(pulse_buffer[0], PULSE_BUFFER_LENGTH / 2, 0);
         DMA1_IFCR = DMA_ISR_HTIF2;
-    }
-
-    if (DMA1_ISR & DMA_ISR_TCIF2) {
+    } else if (DMA1_ISR & DMA_ISR_TCIF2) {
         fill_dma_buffer(pulse_buffer[0] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 0);
         DMA1_IFCR = DMA_ISR_TCIF2;
     }
+    hal_clear_led(0);
 }
 
 void dma1_channel3_isr(void) {
+    hal_set_led(1);
     if (!reset_counter[4] && !reset_counter[5]
      && !reset_counter[6] && !reset_counter[7]) {
         // Need to ensure the DMA gets written one last time
@@ -259,10 +280,9 @@ void dma1_channel3_isr(void) {
     if (DMA1_ISR & DMA_ISR_HTIF3) {
         fill_dma_buffer(pulse_buffer[1], PULSE_BUFFER_LENGTH / 2, 4);
         DMA1_IFCR = DMA_ISR_HTIF3;
-    }
-
-    if (DMA1_ISR & DMA_ISR_TCIF3) {
+    } else if (DMA1_ISR & DMA_ISR_TCIF3) {
         fill_dma_buffer(pulse_buffer[1] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 4);
         DMA1_IFCR = DMA_ISR_TCIF3;
     }
+    hal_clear_led(1);
 }

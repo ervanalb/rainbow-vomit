@@ -6,7 +6,7 @@ CFILES += src/hal.c
 CFILES += src/protocol.c
 CFILES += src/output.c
 
-CFLAGS += -O2
+CFLAGS += -O3
 LDFLAGS += -Xlinker -Map=$(PROJECT).map
 
 INCLUDES += -Isrc

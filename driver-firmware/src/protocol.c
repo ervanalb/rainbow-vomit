@@ -45,6 +45,7 @@ static void packet_start(void) {
         case CMD_FRAME:
             channel_index = 0;
             output_clear();
+            hal_set_led(2);
             break;
         case CMD_LENGTHS:
             byte_counter = 0;
@@ -88,6 +89,7 @@ static void packet_rx(uint8_t b) {
 static void packet_done(void) {
     switch (command_byte) {
         case CMD_FRAME:
+            hal_clear_led(2);
             output_write();
             break;
         case CMD_LENGTHS:

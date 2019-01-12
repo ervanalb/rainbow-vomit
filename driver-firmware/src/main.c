@@ -10,6 +10,6 @@ int main(void) {
     //output_write();
     for (;;) {
         hal_usb_poll();
-        output_update_indicators();
+        //output_update_indicators();
     }
 }

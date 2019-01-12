@@ -1,5 +1,6 @@
 import serial
 import struct
+import time
 
 ser = serial.Serial("/dev/ttyACM0")
 
@@ -18,7 +19,15 @@ def cobs_encode(data):
     return output
 
 def send_command(cmd, data):
-    ser.write(b'\0' + cobs_encode(bytes((cmd,)) + data) + b'\0')
+    data = b'\0' + cobs_encode(bytes((cmd,)) + data) + b'\0'
+    for i in range(100):
+        t1 = time.time()
+        ser.write(data)
+        t2 = time.time()
+        print("datalen:", len(data))
+        print("FPS:", 1 / (t2 - t1))
+        print("kilobits per sec:", 8 * len(data) / (t2 - t1) / 1000)
+        print("target kbps:", 800 * 8)
 
 CMD_FRAME = 0x00
 CMD_LENGTHS = 0x01
@@ -28,16 +37,19 @@ def set_lengths(lengths):
 
 if __name__ == "__main__":
     #set_lengths([12, 12, 0, 0, 0, 0, 12, 12])
-    set_lengths([3, 3, 3, 3, 3, 3, 3, 3])
+    l = 1024 * 3
+    #set_lengths([l, l, 0, 0, 0, 0, l, l])
+    set_lengths([l, l, l, l, l, l, l, l])
 
-    #import time
+    import time
     #i = 255
+    #rainbow = [255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 255]
+    #full_rainbow = (rainbow * (l // len(rainbow) + 1))[0:l]
     while True:
-        #for i in range(256):
-        f = b''
-        for ch in range(8):
-            color = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]]
-            color += [[255, 0, 255], [0, 255, 255], [10, 10, 10], [255, 255, 255]]
-            f += bytes(color[ch])
-        print(f)
-        send_command(CMD_FRAME, f)
+        for i in range(50):
+            b = [0] * l
+            b[i * 3] = 255
+            b[i * 3 + 1] = 255
+            b[i * 3 + 2] = 255
+            send_command(CMD_FRAME, bytes(b * 8))
+            #time.sleep(0.1)
