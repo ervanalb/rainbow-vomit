@@ -2,21 +2,54 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
+#include <libopencm3/stm32/dma.h>
 #include <stddef.h>
 
 #include "hal.h"
 #include "protocol.h"
+
+static const uint32_t LED_GPIOS[] = {
+    GPIOC,
+    GPIOC,
+    GPIOC,
+    GPIOA,
+    GPIOB,
+    GPIOB,
+    GPIOB,
+    GPIOB
+};
+
+static const uint16_t LED_PINS[] = {
+    GPIO12,
+    GPIO11,
+    GPIO10,
+    GPIO10,
+    GPIO15,
+    GPIO14,
+    GPIO13,
+    GPIO12
+};
 
 void hal_init() {
     rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
     rcc_periph_clock_enable(RCC_AFIO);
     rcc_periph_clock_enable(RCC_GPIOA);
+    rcc_periph_clock_enable(RCC_GPIOB);
     rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_OTGFS);
 
-    gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
-    gpio_set(GPIOC, GPIO12);
+    for (int i = 0; i < (int)(sizeof (LED_PINS) / sizeof (LED_PINS[0])); i++) {
+        gpio_set_mode(LED_GPIOS[i], GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_PINS[i]);
+    }
+}
+
+void hal_set_led(int which) {
+    gpio_set(LED_GPIOS[which], LED_PINS[which]);
+}
+
+void hal_clear_led(int which) {
+    gpio_clear(LED_GPIOS[which], LED_PINS[which]);
 }
 
 static const struct usb_device_descriptor dev = {

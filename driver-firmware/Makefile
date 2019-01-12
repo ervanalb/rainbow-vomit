@@ -6,6 +6,7 @@ CFILES += src/hal.c
 CFILES += src/protocol.c
 CFILES += src/output.c
 
+CFLAGS += -O2
 LDFLAGS += -Xlinker -Map=$(PROJECT).map
 
 INCLUDES += -Isrc
@@ -25,4 +26,4 @@ gdb: $(PROJECT).elf
 load: $(PROJECT).elf
 	$(PREFIX)gdb $(PROJECT).elf -x init.gdb -ex load
 loadquit: $(PROJECT).elf
-	$(PREFIX)gdb app.elf -batch -x init.gdb -ex load -ex kill -ex quit
+	$(PREFIX)gdb $(PROJECT).elf -batch -x init.gdb -ex load -ex kill -ex quit

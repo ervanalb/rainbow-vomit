@@ -1,4 +1,5 @@
 #include "hal.h"
+#include "output.h"
 #include "protocol.h"
 
 int main(void) {
