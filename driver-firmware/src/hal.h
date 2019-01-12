@@ -9,3 +9,6 @@ void hal_clear_led(int which);
 
 // LED strip writing
 void hal_flush_output(void);
+
+// USB
+void hal_usb_poll(void);

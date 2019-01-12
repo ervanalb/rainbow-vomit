@@ -1,4 +1,5 @@
 import serial
+import struct
 
 ser = serial.Serial("/dev/ttyACM0")
 
@@ -17,15 +18,24 @@ def cobs_encode(data):
     return output
 
 def send_command(cmd, data):
-    ser.write(b'\0' + bytes((cmd,)) + cobs_encode(data) + b'\0')
+    ser.write(b'\0' + cobs_encode(bytes((cmd,)) + data) + b'\0')
 
 CMD_FRAME = 0x00
 CMD_LENGTHS = 0x01
 
+def set_lengths(lengths):
+    send_command(CMD_LENGTHS, struct.pack("8H", *lengths))
+
 if __name__ == "__main__":
-    import time
+    set_lengths([12, 12, 0, 0, 0, 0, 12, 12])
+
+    #import time
     #i = 255
     while True:
-        for i in range(256):
-            f = bytes([i, 0, 0] + [0, 0, 0] * 49)
-            send_command(CMD_FRAME, f)
+        #for i in range(256):
+        f = b''
+        for ch in range(4):
+            color = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]][ch]
+            f += bytes(color * 4)
+        print(f)
+        send_command(CMD_FRAME, f)

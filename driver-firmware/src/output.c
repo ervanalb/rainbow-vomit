@@ -12,7 +12,7 @@
 #define PULSE_WIDTH_1 (45 + RISETIME)
 #define RESET_CYCLES 6 // Minimum is 40 bit periods, so 5 byte periods
 
-#define PULSE_BUFFER_LENGTH 256
+#define PULSE_BUFFER_LENGTH 1024
 
 #define TIM_DCR_DBL_4_TRANSFERS (3 << 8)
 #define TIM_DCR_DBA_CCR1 13
@@ -142,7 +142,13 @@ void output_write(void) {
 
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF | DMA_HTIF);
     dma_enable_channel(DMA1, DMA_CHANNEL2);
-    hal_set_led(0);
+}
+
+void output_update_indicators(void) {
+    if (reset_counter[0]) hal_set_led(1); else hal_clear_led(1);
+    if (reset_counter[1]) hal_set_led(0); else hal_clear_led(0);
+    if (reset_counter[2]) hal_set_led(6); else hal_clear_led(6);
+    if (reset_counter[3]) hal_set_led(7); else hal_clear_led(7);
 }
 
 static void fill_dma_buffer(uint8_t* start, int len) {
@@ -185,7 +191,6 @@ void dma1_channel2_isr(void) {
         } else {
             // Disable DMA
             dma_disable_channel(DMA1, DMA_CHANNEL2);
-            hal_clear_led(0);
         }
     }
 

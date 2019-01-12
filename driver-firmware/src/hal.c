@@ -30,20 +30,6 @@ static const uint16_t LED_PINS[] = {
     GPIO12
 };
 
-void hal_init() {
-    rcc_clock_setup_in_hse_8mhz_out_72mhz();
-
-    rcc_periph_clock_enable(RCC_AFIO);
-    rcc_periph_clock_enable(RCC_GPIOA);
-    rcc_periph_clock_enable(RCC_GPIOB);
-    rcc_periph_clock_enable(RCC_GPIOC);
-	rcc_periph_clock_enable(RCC_OTGFS);
-
-    for (int i = 0; i < (int)(sizeof (LED_PINS) / sizeof (LED_PINS[0])); i++) {
-        gpio_set_mode(LED_GPIOS[i], GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_PINS[i]);
-    }
-}
-
 void hal_set_led(int which) {
     gpio_set(LED_GPIOS[which], LED_PINS[which]);
 }
@@ -268,21 +254,35 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 				 cdcacm_control_request);
 }
 
-void usb_main(void)
-{
-  usbd_device *usbd_dev;
+static usbd_device *usbd_dev;
 
-  usbd_dev = usbd_init(&stm32f107_usb_driver,
+void hal_init() {
+    rcc_clock_setup_in_hse_8mhz_out_72mhz();
+
+    rcc_periph_clock_enable(RCC_AFIO);
+    rcc_periph_clock_enable(RCC_GPIOA);
+    rcc_periph_clock_enable(RCC_GPIOB);
+    rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_OTGFS);
+
+    for (int i = 0; i < (int)(sizeof (LED_PINS) / sizeof (LED_PINS[0])); i++) {
+        gpio_set_mode(LED_GPIOS[i], GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_PINS[i]);
+    }
+
+    // USB init
+
+    usbd_dev = usbd_init(&stm32f107_usb_driver,
 		       &dev,
 		       &config,
 		       usb_strings,
 		       3,
 		       usbd_control_buffer,
 		       sizeof(usbd_control_buffer));
-  usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
+    usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
+}
 
-  while (1) {
+
+void hal_usb_poll()
+{
     usbd_poll(usbd_dev);
-  }
-
 }

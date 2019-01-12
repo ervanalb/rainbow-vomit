@@ -1,5 +1,9 @@
 #include "protocol.h"
 #include "output.h"
+#include <string.h>
+
+#define CMD_FRAME   0x00
+#define CMD_LENGTHS 0x01
 
 static int command_byte;
 // -2 indicates uninitialized state (bytes will be discarded)
@@ -12,6 +16,9 @@ static uint8_t cobs_add_zero;
 
 static int channel_index;
 
+static uint8_t lengths[OUTPUT_CHANNEL_COUNT * sizeof (uint16_t)];
+static int byte_counter;
+
 // Prepare COBS decoder for the start of a new block
 static void reset_cobs_decoder(void) {
     cobs_remaining = 0;
@@ -21,31 +28,27 @@ static void reset_cobs_decoder(void) {
 // Decode one COBS byte from src, and put the result in *dest
 // Returns -1 if there is no byte to report, otherwise returns the byte.
 static int cobs_decode(uint8_t src) {
-    int result = -1;
     if (!cobs_remaining)
     {
         cobs_remaining = src - 1;
+        int result = (cobs_add_zero) ? 0 : -1;
         cobs_add_zero = (src < 255);
-        return (cobs_add_zero) ? 0 : -1;
+        return result;
     }
 
     cobs_remaining--;
     return src;
 }
 
-static void next_output_channel(void) {
-    for (; channel_index < OUTPUT_CHANNEL_COUNT; channel_index++) {
-        if (output_channel[channel_index].length > 0) return;
-    }
-    command_byte = -2; // Discard remaining bytes
-}
-
 static void packet_start(void) {
     switch (command_byte) {
-        case 0x00:
+        case CMD_FRAME:
             channel_index = 0;
-            next_output_channel();
             output_clear();
+            break;
+        case CMD_LENGTHS:
+            byte_counter = 0;
+            memset(lengths, 0, sizeof (lengths));
             break;
         default:
             break;
@@ -54,16 +57,28 @@ static void packet_start(void) {
 
 static void packet_rx(uint8_t b) {
     switch (command_byte) {
-        case 0x00:
+        case CMD_FRAME:
         {
             struct output_channel *c = &output_channel[channel_index];
+            if (c->length_filled >= c->length) {
+                for (channel_index++; channel_index < OUTPUT_CHANNEL_COUNT; channel_index++) {
+                    if (output_channel[channel_index].length > 0) break;
+                }
+                if (channel_index >= OUTPUT_CHANNEL_COUNT) {
+                    command_byte = -2;
+                    break;
+                }
+                c = &output_channel[channel_index];
+            }
             c->buffer[c->length_filled] = b;
             c->length_filled++;
-            if (c->length_filled >= c->length) {
-                channel_index++;
-                next_output_channel();
-            }
             break;
+        }
+        case CMD_LENGTHS:
+        {
+            if (byte_counter < (int)sizeof (lengths)) {
+                lengths[byte_counter++] = b;
+            }
         }
         default:
             break;
@@ -72,8 +87,13 @@ static void packet_rx(uint8_t b) {
 
 static void packet_done(void) {
     switch (command_byte) {
-        case 0x00:
+        case CMD_FRAME:
             output_write();
+            break;
+        case CMD_LENGTHS:
+            for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
+                memcpy(&output_channel[i].length, &lengths[i * sizeof (uint16_t)], sizeof (uint16_t));
+            }
             break;
         default:
             break;

@@ -15,3 +15,4 @@ extern struct output_channel *output_channel;
 void output_init(void);
 void output_clear(void);
 void output_write(void);
+void output_update_indicators(void);
