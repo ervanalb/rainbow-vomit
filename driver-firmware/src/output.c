@@ -186,50 +186,25 @@ void output_update_indicators(void) {
     if (byte_counter[7]) hal_set_led(2); else hal_clear_led(2);
 }
 
-static void fill_dma_buffer_ch2(uint8_t* start, int len) {
+static inline __attribute__((always_inline)) void fill_dma_buffer(uint8_t* start, int len, int offset) {
     int len_per_channel = len / 4;
     for (int c = 0; c < 4; c++) {
         uint8_t *cur = start + c;
         for (int i = 0; i < len_per_channel; i += 8) {
-            if (byte_counter[c]) {
+            if (byte_counter[c + offset]) {
                 for (int b = 7; b >= 0; b--) {
-                    *cur = (*(data_pointer[c]) & (1 << b)) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                    *cur = (*(data_pointer[c + offset]) & (1 << b)) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
                     cur += 4;
                 }
-                data_pointer[c]++;
-                byte_counter[c]--;
+                data_pointer[c + offset]++;
+                byte_counter[c + offset]--;
             } else {
                 for (int b = 7; b >= 0; b--) {
                     *cur = 0;
                     cur += 4;
                 }
-                if (reset_counter[c]) {
-                    reset_counter[c]--;
-                }
-            }
-        }
-    }
-}
-
-static void fill_dma_buffer_ch3(uint8_t* start, int len) {
-    int len_per_channel = len / 4;
-    for (int c = 0; c < 4; c++) {
-        uint8_t *cur = start + c;
-        for (int i = 0; i < len_per_channel; i += 8) {
-            if (byte_counter[c + 4]) {
-                for (int b = 7; b >= 0; b--) {
-                    *cur = (*(data_pointer[c + 4]) & (1 << b)) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                    cur += 4;
-                }
-                data_pointer[c + 4]++;
-                byte_counter[c + 4]--;
-            } else {
-                for (int b = 7; b >= 0; b--) {
-                    *cur = 0;
-                    cur += 4;
-                }
-                if (reset_counter[c + 4]) {
-                    reset_counter[c + 4]--;
+                if (reset_counter[c + offset]) {
+                    reset_counter[c + offset]--;
                 }
             }
         }
@@ -255,12 +230,12 @@ void dma1_channel2_isr(void) {
     }
 
     if (DMA1_ISR & DMA_ISR_HTIF2) {
-        fill_dma_buffer_ch2(pulse_buffer[0], PULSE_BUFFER_LENGTH / 2);
+        fill_dma_buffer(pulse_buffer[0], PULSE_BUFFER_LENGTH / 2, 0);
         DMA1_IFCR = DMA_ISR_HTIF2;
     }
 
     if (DMA1_ISR & DMA_ISR_TCIF2) {
-        fill_dma_buffer_ch2(pulse_buffer[0] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2);
+        fill_dma_buffer(pulse_buffer[0] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 0);
         DMA1_IFCR = DMA_ISR_TCIF2;
     }
 }
@@ -282,12 +257,12 @@ void dma1_channel3_isr(void) {
     }
 
     if (DMA1_ISR & DMA_ISR_HTIF3) {
-        fill_dma_buffer_ch3(pulse_buffer[1], PULSE_BUFFER_LENGTH / 2);
+        fill_dma_buffer(pulse_buffer[1], PULSE_BUFFER_LENGTH / 2, 4);
         DMA1_IFCR = DMA_ISR_HTIF3;
     }
 
     if (DMA1_ISR & DMA_ISR_TCIF3) {
-        fill_dma_buffer_ch3(pulse_buffer[1] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2);
+        fill_dma_buffer(pulse_buffer[1] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 4);
         DMA1_IFCR = DMA_ISR_TCIF3;
     }
 }
