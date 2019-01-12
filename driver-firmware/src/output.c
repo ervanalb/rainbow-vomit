@@ -135,6 +135,11 @@ void output_write(void) {
         pulse_buffer[i] = 0;
     }
 
+    // These two lines are necessary to keep DMA correctly
+    // aligned with the four channels
+    TIM2_DCR = TIM_DCR_DBL_4_TRANSFERS | TIM_DCR_DBA_CCR1;
+    dma_set_number_of_data(DMA1, DMA_CHANNEL2, PULSE_BUFFER_LENGTH);
+
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF | DMA_HTIF);
     dma_enable_channel(DMA1, DMA_CHANNEL2);
     hal_set_led(0);
