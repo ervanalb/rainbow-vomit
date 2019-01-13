@@ -7,7 +7,6 @@
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/lib/usb/usb_private.h>
 #include <stddef.h>
-#include <string.h>
 
 // This hack gets us access to
 // stm32f107_usbd_init
@@ -15,7 +14,7 @@
 #include <libopencm3/lib/usb/usb_f107.c>
 
 // Expand the FIFO size of the USB driver
-static const struct _usbd_driver custom_driver = {
+static const struct _usbd_driver custom_usb_driver = {
     .init = stm32f107_usbd_init,
     .set_address = dwc_set_address,
     .ep_setup = dwc_ep_setup,
@@ -29,7 +28,7 @@ static const struct _usbd_driver custom_driver = {
     .disconnect = dwc_disconnect,
     .base_address = USB_OTG_FS_BASE,
     .set_address_before_status = 1,
-    .rx_fifo_size = 192,
+    .rx_fifo_size = 224,
 };
 
 #include "hal.h"
@@ -265,8 +264,8 @@ static void cdcacm_set_config(usbd_device *usbd_dev_handle, uint16_t wValue)
   usbd_ep_setup(usbd_dev_handle, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
   usbd_ep_setup(usbd_dev_handle, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
-  // Buffer up to 12 packets for a total of 768 bytes
-  usbd_dev_handle->doeptsiz[0x01] = (12 << 19) | 768;
+  // Buffer up to 14 packets for a total of 896 bytes
+  usbd_dev_handle->doeptsiz[0x01] = (14 << 19) | 896;
 
   usbd_register_control_callback(usbd_dev_handle,
 				 USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
@@ -293,7 +292,7 @@ void hal_init() {
 
     // USB init
 
-    usbd_dev_handle = usbd_init(&custom_driver,
+    usbd_dev_handle = usbd_init(&custom_usb_driver,
 		       &dev,
 		       &config,
 		       usb_strings,
@@ -302,7 +301,7 @@ void hal_init() {
 		       sizeof(usbd_control_buffer));
     usbd_register_set_config_callback(usbd_dev_handle, cdcacm_set_config);
 
-    nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 5);
+    nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 4);
     nvic_enable_irq(NVIC_OTG_FS_IRQ);
 }
 

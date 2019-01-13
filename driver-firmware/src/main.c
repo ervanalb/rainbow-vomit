@@ -21,6 +21,7 @@ int main(void) {
         //for (int i = 0; i < 300; i++) {
         //    hal_poll_usb(); // Give USB an advantage
         //}
-        //output_update_indicators();
+        //otg_fs_isr();
+        output_update_indicators();
     }
 }

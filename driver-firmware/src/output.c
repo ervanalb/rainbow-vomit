@@ -13,7 +13,7 @@
 #define PULSE_WIDTH_1 (45 + RISETIME)
 #define RESET_CYCLES 6 // Minimum is 40 bit periods, so 5 byte periods
 
-#define PULSE_BUFFER_LENGTH (256 * OUTPUT_CHANNEL_COUNT) // 64 bits of buffer per channel
+#define PULSE_BUFFER_LENGTH (256 * OUTPUT_CHANNEL_COUNT) // 256 bits of buffer per channel seems to be the sweet spot
 
 #define TIM_DCR_DBL_4_TRANSFERS (3 << 8)
 #define TIM_DCR_DBA_CCR1 13
