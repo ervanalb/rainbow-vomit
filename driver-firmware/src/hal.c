@@ -5,6 +5,7 @@
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/lib/usb/usb_private.h>
 #include <stddef.h>
 
 #include "hal.h"
@@ -232,15 +233,13 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
   return 0;
 }
 
-static volatile uint8_t buf2[64];
-
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 {
   (void)ep;
-  uint8_t buf[64];
+  static uint8_t buf[64];
   int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
 
-  //protocol_rx(buf, len);
+  protocol_rx(buf, len);
   //usbd_ep_write_packet(usbd_dev, 0x82, buf, len);
 }
 
@@ -251,6 +250,9 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
   usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
   usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
   usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+
+  // Buffer up to 8 packets for a total of 512 bytes
+  usbd_dev->doeptsiz[0x01] = (8 << 19) | 512;
 
   usbd_register_control_callback(usbd_dev,
 				 USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,

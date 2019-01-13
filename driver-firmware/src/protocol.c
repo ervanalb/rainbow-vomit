@@ -88,7 +88,7 @@ static void packet_rx(uint8_t b) {
 static void packet_done(void) {
     switch (command_byte) {
         case CMD_FRAME:
-            output_write();
+            //output_write();
             break;
         case CMD_LENGTHS:
             for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
@@ -105,6 +105,7 @@ void protocol_init() {
 }
 
 void protocol_rx(uint8_t* data, int length) {
+    hal_set_led(2);
     for (int i = 0; i < length; i++) {
         int b = data[i];
         if (b == 0) {
@@ -113,9 +114,7 @@ void protocol_rx(uint8_t* data, int length) {
             command_byte = -1;
             continue;
         }
-        hal_set_led(2);
         b = cobs_decode(b);
-        hal_clear_led(2);
         if (b == -1) continue;
         if (command_byte == -1) {
             command_byte = b;
@@ -124,4 +123,5 @@ void protocol_rx(uint8_t* data, int length) {
         }
         packet_rx(b);
     }
+    hal_clear_led(2);
 }
