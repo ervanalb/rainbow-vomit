@@ -260,7 +260,7 @@ void dma1_channel2_isr(void) {
     hal_clear_led(0);
 }
 
-void dma1_channel3_isr(void) {
+void __attribute__((used)) dma1_channel3_isr(void) {
     hal_set_led(1);
     if (!reset_counter[4] && !reset_counter[5]
      && !reset_counter[6] && !reset_counter[7]) {

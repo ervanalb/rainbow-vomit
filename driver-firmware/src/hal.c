@@ -3,6 +3,8 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/stm32/dma.h>
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/cm3/scb.h>
 #include <stddef.h>
 
 #include "hal.h"
@@ -230,13 +232,15 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
   return 0;
 }
 
+static volatile uint8_t buf2[64];
+
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 {
   (void)ep;
   uint8_t buf[64];
   int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
 
-  protocol_rx(buf, len);
+  //protocol_rx(buf, len);
   //usbd_ep_write_packet(usbd_dev, 0x82, buf, len);
 }
 
@@ -265,6 +269,8 @@ void hal_init() {
     rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_OTGFS);
 
+    SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_PRIGROUP_GROUP4_SUB4;
+
     for (int i = 0; i < (int)(sizeof (LED_PINS) / sizeof (LED_PINS[0])); i++) {
         gpio_set_mode(LED_GPIOS[i], GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_PINS[i]);
     }
@@ -279,10 +285,10 @@ void hal_init() {
 		       usbd_control_buffer,
 		       sizeof(usbd_control_buffer));
     usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
+    nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 4);
+    nvic_enable_irq(NVIC_OTG_FS_IRQ);
 }
 
-
-void hal_usb_poll()
-{
+void __attribute__((used)) otg_fs_isr(void) {
     usbd_poll(usbd_dev);
 }
