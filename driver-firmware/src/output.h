@@ -1,16 +1,13 @@
 #pragma once
 #include <stdint.h>
+#include "protocol.h"
 
 #define OUTPUT_CHANNEL_COUNT 8
-#define OUTPUT_CHANNEL_BUFFER_SIZE (1024 * 3)
+#define OUTPUT_BUFFER_SIZE (OUTPUT_CHANNEL_COUNT * 1024 * 3 + PROTOCOL_OVERHEAD)
 
-struct output_channel {
-    uint8_t buffer[OUTPUT_CHANNEL_BUFFER_SIZE];
-    int length;
-    int length_filled;
-};
-
-extern struct output_channel *output_channel;
+extern uint8_t *output_buffer;
+extern int *output_start;
+extern int *output_length;
 
 void output_init(void);
 void output_clear(void);

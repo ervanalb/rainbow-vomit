@@ -6,18 +6,21 @@ int main(void) {
     protocol_init();
     hal_init();
     output_init();
+    //for (;;) {
+    //    output_length[0] = 1024 * 3;
+    //    output_length[1] = 1024 * 3;
+    //    output_length[2] = 1024 * 3;
+    //    output_length[3] = 1024 * 3;
+    //    output_length[4] = 1024 * 3;
+    //    output_length[5] = 1024 * 3;
+    //    output_length[6] = 1024 * 3;
+    //    output_length[7] = 1024 * 3;
+    //    output_write();
+    //}
     for (;;) {
-        output_channel[0].length_filled = 1024 * 3;
-        output_channel[1].length_filled = 1024 * 3;
-        output_channel[2].length_filled = 1024 * 3;
-        output_channel[3].length_filled = 1024 * 3;
-        output_channel[4].length_filled = 1024 * 3;
-        output_channel[5].length_filled = 1024 * 3;
-        output_channel[6].length_filled = 1024 * 3;
-        output_channel[7].length_filled = 1024 * 3;
-        output_write();
-    }
-    for (;;) {
+        //for (int i = 0; i < 300; i++) {
+        //    hal_poll_usb(); // Give USB an advantage
+        //}
         //output_update_indicators();
     }
 }

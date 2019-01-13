@@ -7,6 +7,30 @@
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/lib/usb/usb_private.h>
 #include <stddef.h>
+#include <string.h>
+
+// This hack gets us access to
+// stm32f107_usbd_init
+// which is necessary for initializing the struct below
+#include <libopencm3/lib/usb/usb_f107.c>
+
+// Expand the FIFO size of the USB driver
+static const struct _usbd_driver custom_driver = {
+    .init = stm32f107_usbd_init,
+    .set_address = dwc_set_address,
+    .ep_setup = dwc_ep_setup,
+    .ep_reset = dwc_endpoints_reset,
+    .ep_stall_set = dwc_ep_stall_set,
+    .ep_stall_get = dwc_ep_stall_get,
+    .ep_nak_set = dwc_ep_nak_set,
+    .ep_write_packet = dwc_ep_write_packet,
+    .ep_read_packet = dwc_ep_read_packet,
+    .poll = dwc_poll,
+    .disconnect = dwc_disconnect,
+    .base_address = USB_OTG_FS_BASE,
+    .set_address_before_status = 1,
+    .rx_fifo_size = 192,
+};
 
 #include "hal.h"
 #include "protocol.h"
@@ -192,16 +216,16 @@ static const char *usb_strings[] = {
 /* Buffer to be used for control requests. */
 uint8_t usbd_control_buffer[128];
 
-static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_dev,
+static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_dev_handle,
 				  struct usb_setup_data *req,
 				  uint8_t **buf,
 				  uint16_t *len,
-				  void (**complete)(usbd_device *usbd_dev,
+				  void (**complete)(usbd_device *usbd_dev_handle,
 						    struct usb_setup_data *req))
 {
   (void)complete;
   (void)buf;
-  (void)usbd_dev;
+  (void)usbd_dev_handle;
 
   switch(req->bRequest) {
   case USB_CDC_REQ_SET_CONTROL_LINE_STATE: {
@@ -233,34 +257,24 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
   return 0;
 }
 
-static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
-{
-  (void)ep;
-  static uint8_t buf[64];
-  int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
-
-  //protocol_rx(buf, len);
-  //usbd_ep_write_packet(usbd_dev, 0x82, buf, len);
-}
-
-static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
+static void cdcacm_set_config(usbd_device *usbd_dev_handle, uint16_t wValue)
 {
   (void)wValue;
   
-  usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
-  usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
-  usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+  usbd_ep_setup(usbd_dev_handle, 0x01, USB_ENDPOINT_ATTR_BULK, 64, protocol_rx);
+  usbd_ep_setup(usbd_dev_handle, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+  usbd_ep_setup(usbd_dev_handle, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
-  // Buffer up to 8 packets for a total of 512 bytes
-  usbd_dev->doeptsiz[0x01] = (8 << 19) | 512;
+  // Buffer up to 12 packets for a total of 768 bytes
+  usbd_dev_handle->doeptsiz[0x01] = (12 << 19) | 768;
 
-  usbd_register_control_callback(usbd_dev,
+  usbd_register_control_callback(usbd_dev_handle,
 				 USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 				 USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				 cdcacm_control_request);
 }
 
-static usbd_device *usbd_dev;
+static usbd_device *usbd_dev_handle;
 
 void hal_init() {
     rcc_clock_setup_in_hse_8mhz_out_72mhz();
@@ -271,7 +285,7 @@ void hal_init() {
     rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_OTGFS);
 
-    SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_PRIGROUP_GROUP4_SUB4;
+    //SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_PRIGROUP_GROUP4_SUB4;
 
     for (int i = 0; i < (int)(sizeof (LED_PINS) / sizeof (LED_PINS[0])); i++) {
         gpio_set_mode(LED_GPIOS[i], GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_PINS[i]);
@@ -279,18 +293,19 @@ void hal_init() {
 
     // USB init
 
-    usbd_dev = usbd_init(&stm32f107_usb_driver,
+    usbd_dev_handle = usbd_init(&custom_driver,
 		       &dev,
 		       &config,
 		       usb_strings,
 		       3,
 		       usbd_control_buffer,
 		       sizeof(usbd_control_buffer));
-    usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
-    nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 4);
+    usbd_register_set_config_callback(usbd_dev_handle, cdcacm_set_config);
+
+    nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 5);
     nvic_enable_irq(NVIC_OTG_FS_IRQ);
 }
 
-void __attribute__((used)) otg_fs_isr(void) {
-    usbd_poll(usbd_dev);
+void __attribute__((used)) otg_fs_isr() {
+    usbd_poll(usbd_dev_handle);
 }

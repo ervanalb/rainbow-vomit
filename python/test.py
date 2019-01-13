@@ -18,8 +18,17 @@ def cobs_encode(data):
             ptr = next_zero + 1
     return output
 
-def send_command(cmd, data):
-    data = b'\0' + cobs_encode(bytes((cmd,)) + data) + b'\0'
+OUTPUT_CHANNEL_COUNT = 8
+
+def packetize(data):
+    assert len(data) <= OUTPUT_CHANNEL_COUNT
+    if len(data) < OUTPUT_CHANNEL_COUNT:
+        data += [b""] * (OUTPUT_CHANNEL_COUNT - len(data))
+    metadata = struct.pack("{}H".format(OUTPUT_CHANNEL_COUNT), *[len(ch_data) for ch_data in data])
+    bytedata = b"".join([bytes(ch_data) for ch_data in data])
+    return metadata + bytedata
+
+def send(data):
     for i in range(100):
         t1 = time.time()
         ser.write(data)
@@ -32,24 +41,19 @@ def send_command(cmd, data):
 CMD_FRAME = 0x00
 CMD_LENGTHS = 0x01
 
-def set_lengths(lengths):
-    send_command(CMD_LENGTHS, struct.pack("8H", *lengths))
-
 if __name__ == "__main__":
-    #set_lengths([12, 12, 0, 0, 0, 0, 12, 12])
-    l = 1024 * 3
-    #set_lengths([l, l, 0, 0, 0, 0, l, l])
-    set_lengths([l, l, l, l, l, l, l, l])
-
     import time
     #i = 255
     #rainbow = [255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 255]
-    #full_rainbow = (rainbow * (l // len(rainbow) + 1))[0:l]
+    #full_rainbow = (rainbow * (l // len(rainbow) + 1))[0:l]i
+
+    l = 1024 * 3
+
     while True:
         for i in range(50):
             b = [0] * l
             b[i * 3] = 255
             b[i * 3 + 1] = 255
             b[i * 3 + 2] = 255
-            send_command(CMD_FRAME, bytes(b * 8))
+            send(packetize([b, b, b, b, b, b, b, b]))
             #time.sleep(0.1)

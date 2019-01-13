@@ -26,9 +26,17 @@ const uint32_t DMA_CHANNELS[TIMER_COUNT] = {DMA_CHANNEL2, DMA_CHANNEL3};
 // Data is written into the back buffer
 // and displayed from the front buffer.
 
-static struct output_channel output_channel_buffers[2][OUTPUT_CHANNEL_COUNT];
-struct output_channel *output_channel;
-static struct output_channel *output_display_channel;
+static uint8_t output_buffers[2][OUTPUT_BUFFER_SIZE];
+static int output_starts[2][OUTPUT_CHANNEL_COUNT];
+static int output_lengths[2][OUTPUT_CHANNEL_COUNT];
+
+uint8_t *output_buffer;
+int *output_start;
+int *output_length;
+
+static uint8_t *display_buffer;
+static int *display_start;
+static int *display_length;
 
 // HAL layer
 // Two pulse buffers, one for each timer
@@ -41,11 +49,10 @@ static int dma_flush_counter[TIMER_COUNT];
 
 void output_init(void) {
     // Set up buffers
-    output_channel = output_channel_buffers[0];
-    for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
-        output_channel[i].length = OUTPUT_CHANNEL_BUFFER_SIZE;
-        output_channel[i].length_filled = 0;
-    }
+    output_buffer = output_buffers[0];
+    output_start = output_starts[0];
+    output_length = output_lengths[0];
+    output_clear();
 
     // Set up hardware
     rcc_periph_clock_enable(RCC_TIM2);
@@ -107,29 +114,33 @@ void output_init(void) {
 
 void output_clear(void) {
     for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
-        output_channel[i].length_filled = 0;
+        output_length[i] = 0;
     }
 }
 
 // Called right before display starts,
 // so that the front channel has the latest data.
 static void flip(void) {
-    if (output_channel == output_channel_buffers[0]) {
-        output_channel = output_channel_buffers[1];
-        output_display_channel = output_channel_buffers[0];
+    if (output_buffer == output_buffers[0]) {
+        output_buffer = output_buffers[1];
+        output_start = output_starts[1];
+        output_length = output_lengths[1];
+        display_buffer = output_buffers[0];
+        display_start = output_starts[0];
+        display_length = output_lengths[0];
     } else {
-        output_channel = output_channel_buffers[0];
-        output_display_channel = output_channel_buffers[1];
-    }
-    for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
-        output_channel[i].length = output_display_channel[i].length;
-        output_channel[i].length_filled = 0;
+        output_buffer = output_buffers[0];
+        output_start = output_starts[0];
+        output_length = output_lengths[0];
+        display_buffer = output_buffers[1];
+        display_start = output_starts[1];
+        display_length = output_lengths[1];
     }
 }
 
 void output_write(void) {
     // Wait for both DMA channels to be idle
-    hal_set_led(3);
+    hal_set_led(7);
     for (;;) {
         int t;
         for (t = 0; t < TIMER_COUNT; t++) {
@@ -137,27 +148,27 @@ void output_write(void) {
         }
         if (t >= TIMER_COUNT) break;
     }
-    hal_clear_led(3);
+    hal_clear_led(7);
 
     flip();
 
-    data_pointer[0] = output_display_channel[1].buffer;
-    data_pointer[1] = output_display_channel[0].buffer;
-    data_pointer[2] = output_display_channel[7].buffer;
-    data_pointer[3] = output_display_channel[6].buffer;
-    data_pointer[4] = output_display_channel[5].buffer;
-    data_pointer[5] = output_display_channel[4].buffer;
-    data_pointer[6] = output_display_channel[3].buffer;
-    data_pointer[7] = output_display_channel[2].buffer;
+    data_pointer[0] = &display_buffer[display_start[1]];
+    data_pointer[1] = &display_buffer[display_start[0]];
+    data_pointer[2] = &display_buffer[display_start[7]];
+    data_pointer[3] = &display_buffer[display_start[6]];
+    data_pointer[4] = &display_buffer[display_start[5]];
+    data_pointer[5] = &display_buffer[display_start[4]];
+    data_pointer[6] = &display_buffer[display_start[3]];
+    data_pointer[7] = &display_buffer[display_start[2]];
 
-    byte_counter[0] = output_display_channel[1].length_filled;
-    byte_counter[1] = output_display_channel[0].length_filled;
-    byte_counter[2] = output_display_channel[7].length_filled;
-    byte_counter[3] = output_display_channel[6].length_filled;
-    byte_counter[4] = output_display_channel[5].length_filled;
-    byte_counter[5] = output_display_channel[4].length_filled;
-    byte_counter[6] = output_display_channel[3].length_filled;
-    byte_counter[7] = output_display_channel[2].length_filled;
+    byte_counter[0] = display_length[1];
+    byte_counter[1] = display_length[0];
+    byte_counter[2] = display_length[7];
+    byte_counter[3] = display_length[6];
+    byte_counter[4] = display_length[5];
+    byte_counter[5] = display_length[4];
+    byte_counter[6] = display_length[3];
+    byte_counter[7] = display_length[2];
 
     for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
         reset_counter[i] = RESET_CYCLES;
@@ -181,7 +192,7 @@ void output_update_indicators(void) {
     if (byte_counter[0]) hal_set_led(1); else hal_clear_led(1);
     if (byte_counter[1]) hal_set_led(0); else hal_clear_led(0);
     if (byte_counter[2]) hal_set_led(6); else hal_clear_led(6);
-    if (byte_counter[3]) hal_set_led(7); else hal_clear_led(7);
+    if (byte_counter[3]) hal_set_led(0); else hal_clear_led(0); // 7
     if (byte_counter[4]) hal_set_led(5); else hal_clear_led(5);
     if (byte_counter[5]) hal_set_led(4); else hal_clear_led(4);
     if (byte_counter[6]) hal_set_led(3); else hal_clear_led(3);
@@ -234,7 +245,6 @@ static inline __attribute__((always_inline)) void fill_dma_buffer(uint8_t* start
 static volatile uint32_t a;
 
 void dma1_channel2_isr(void) {
-    hal_set_led(0);
     if (!reset_counter[0] && !reset_counter[1]
      && !reset_counter[2] && !reset_counter[3]) {
         // Need to ensure the DMA gets written one last time
@@ -257,11 +267,9 @@ void dma1_channel2_isr(void) {
         fill_dma_buffer(pulse_buffer[0] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 0);
         DMA1_IFCR = DMA_ISR_TCIF2;
     }
-    hal_clear_led(0);
 }
 
 void __attribute__((used)) dma1_channel3_isr(void) {
-    hal_set_led(1);
     if (!reset_counter[4] && !reset_counter[5]
      && !reset_counter[6] && !reset_counter[7]) {
         // Need to ensure the DMA gets written one last time
@@ -284,5 +292,4 @@ void __attribute__((used)) dma1_channel3_isr(void) {
         fill_dma_buffer(pulse_buffer[1] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 4);
         DMA1_IFCR = DMA_ISR_TCIF3;
     }
-    hal_clear_led(1);
 }
