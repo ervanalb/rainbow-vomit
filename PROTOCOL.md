@@ -1,75 +1,12 @@
 # Protocol
 The LED strip driver enumerates as a virtual serial port.
 
-## Packetizing
-Each packet is COBS-encoded. An end-of-packet is denoted by a 0 byte (separator character.)
-A 0 byte should also be sent at the beginning of a packet to set the system to a known state.
-The device will not operate until a 0 byte is received
-(so that operating systems that send AT commands at the beginning will not cause bad things to happen)
+Each frame consists of a 16-byte chunk of metadata, followed by the pixel data. The metadata must be sent every frame, and contains the length for each channel.
+The lengths are little-endian and are in bytes, so multiply the number of RGB pixels you have by 3.
+
+Metadata format:
 
 <table><tr>
- <td>0 byte (initialization)</td>
- <td>Command (COBS-encoded)</td>
- <td>0 byte (end of packet / start of next packet)</td>
- <td>Command (COBS-encoded)</td>
- <td>0 byte</td>
- <td>0 byte (empty packets are ignored)</td>
- <td>Command (COBS-encoded)</td>
- <td>0 byte</td>
- <td>etc</td>
-</tr></table>
-
-## Within a packet
-The first byte indicates what command is being given. The remaining bytes are that command.
-
-Command | Name    | Data                         | Description
---------|---------|------------------------------|-------------------------------
-0x00    | Frame   | Up to 8192 24-bit RGB values | Write out a frame to the LEDs
-0x01    | Lengths | Eight 16-bit length values   | Sets the length of each strip
-
-### Frame command
-This command is used to output to the LEDs.
-The command looks like this (COBS encoding not shown):
-<table><tr>
- <td>0x00 (Frame command)</td>
- <td>Channel 0 LED 0 byte 0</td>
- <td>Channel 0 LED 0 byte 1</td>
- <td>Channel 0 LED 0 byte 2</td>
- <td>Channel 0 LED 1 byte 0</td>
- <td>Channel 0 LED 1 byte 1</td>
- <td>Channel 0 LED 1 byte 2</td>
- <td>...</td>
- <td>Channel 0 LED (Channel 0 length - 1) byte 0</td>
- <td>Channel 0 LED (Channel 0 length - 1) byte 1</td>
- <td>Channel 0 LED (Channel 0 length - 1) byte 2</td>
- <td>Channel 1 LED 0 byte 0</td>
- <td>Channel 1 LED 0 byte 1</td>
- <td>Channel 1 LED 0 byte 2</td>
- <td>...</td>
- <td>Channel 7 LED (Channel 0 length - 1) byte 0</td>
- <td>Channel 7 LED (Channel 0 length - 1) byte 1</td>
- <td>Channel 7 LED (Channel 0 length - 1) byte 2</td>
-</tr></table>
-
-Lengths are set for each channel with the "Lengths" command.
-On powerup, the default length is 1024 for every channel.
-
-As soon as the end of packet is received, the board begins writing out the data. If the packet is short, only the LEDs given will be output.
-
-The output is double-buffered, so reception of a new frame command can be started immediately while the previous frame is being output.
-In this case, the second frame output may not begin immediately. USB communication will be stalled during this time period
-to ensure that a third frame is not received until there is a place to put it. In this way, the device will self rate-limit to the
-maximum achievable framerate.
-
-Note that sending short packets may result in a shorter write time, which may be undesirable
-if you are relying on the device throttling communication for timing your application.
-
-### Lengths command
-This command is used to set the length of each LED strip. The maximum length for each strip is 1024, 
-
-The command looks like this (COBS encoding not shown):
-<table><tr>
- <td>0x00 (Frame command)</td>
  <td>Channel 0 length LSB</td>
  <td>Channel 0 length MSB</td>
  <td>Channel 1 length LSB</td>
@@ -79,8 +16,39 @@ The command looks like this (COBS encoding not shown):
  <td>Channel 7 length MSB</td>
 </tr></table>
 
-Note that the lengths are little-endian.
+Immediately following the metadata is the pixel data in the following format:
 
-If the packet is short, some lengths will remain unchanged.
+<table><tr>
+ <td>Channel 0 byte 0 *(e.g. LED 0 Red)*</td>
+ <td>Channel 0 byte 1 *(e.g. LED 0 Green)*</td>
+ <td>Channel 0 byte 2 *(e.g. LED 0 Blue)*</td>
+ <td>Channel 0 byte 3 *(e.g. LED 1 Red)*</td>
+ <td>Channel 0 byte 4 *(e.g. LED 1 Green)*</td>
+ <td>Channel 0 byte 5 *(e.g. LED 1 Blue)*</td>
+ <td>...</td>
+ <td>Channel 0 byte (Channel 0 length - 3)</td>
+ <td>Channel 0 byte (Channel 0 length - 2)</td>
+ <td>Channel 0 byte (Channel 0 length - 1)</td>
+ <td>Channel 1 byte 0</td>
+ <td>Channel 1 byte 1</td>
+ <td>Channel 1 byte 2</td>
+ <td>...</td>
+ <td>Channel 7 byte (Channel 0 length - 1)</td>
+ <td>Channel 7 byte (Channel 0 length - 1)</td>
+ <td>Channel 7 byte (Channel 0 length - 1)</td>
+</tr></table>
 
-The default length is 1024 for each channel.
+Once the predetermined amount of data has been received,
+the frame will begin to be written out to the LED strips.
+
+If the protocol gets out of sync, simply frob any control line of the serial port, for example, RTS. Closing and re-opening the serial port should also work.
+
+## Frame buffers
+The output is double-buffered, so reception of a new frame command can be started immediately while the previous frame is being output.
+If data reception of the second frame finishes before the first frame is done being output, the device will pause to allow output to finish. USB communication will be stalled during this time period
+to ensure that a third frame is not received until there is a place to put it. In this way, the device will self rate-limit to the
+maximum achievable framerate.
+
+Each frame buffer has a maximum size of **24576 bytes**. You may split these bytes however you wish amongst the eight channels.
+For instance, you could put them all towards channel 0 in which case you could drive 8192 24-bit RGB LEDs, but would be limited to about 4 frames per second.
+Or, you could use 1024 pixels per channel, which would allow you to run at 30 FPS. Requesting more than the maximum number of bytes will result in undefined behavior.
