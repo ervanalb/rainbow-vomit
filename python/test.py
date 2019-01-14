@@ -29,14 +29,15 @@ def packetize(data):
     return metadata + bytedata
 
 def send(data):
-    for i in range(100):
-        t1 = time.time()
+    t1 = time.time()
+    N = 1
+    for i in range(N):
         ser.write(data)
-        t2 = time.time()
-        print("datalen:", len(data))
-        print("FPS:", 1 / (t2 - t1))
-        print("kilobits per sec:", 8 * len(data) / (t2 - t1) / 1000)
-        print("target kbps:", 800 * 8)
+    t2 = time.time()
+    print("datalen:", len(data))
+    print("FPS:", N * 1 / (t2 - t1))
+    print("kilobits per sec:", N * 8 * len(data) / (t2 - t1) / 1000)
+    print("target kbps:", 800 * 8)
 
 CMD_FRAME = 0x00
 CMD_LENGTHS = 0x01

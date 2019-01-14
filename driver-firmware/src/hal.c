@@ -226,6 +226,12 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
   (void)buf;
   (void)usbd_dev_handle;
 
+  // We reset the protocol state machine
+  // when literally any CDC control request comes in
+  // This means that to ensure you are synchronized,
+  // you just have to poke the serial port a little in some way
+  protocol_init();
+
   switch(req->bRequest) {
   case USB_CDC_REQ_SET_CONTROL_LINE_STATE: {
     /*

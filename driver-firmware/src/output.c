@@ -13,7 +13,9 @@
 #define PULSE_WIDTH_1 (45 + RISETIME)
 #define RESET_CYCLES 6 // Minimum is 40 bit periods, so 5 byte periods
 
-#define PULSE_BUFFER_LENGTH (256 * OUTPUT_CHANNEL_COUNT) // 256 bits of buffer per channel seems to be the sweet spot
+#define PULSE_BUFFER_LENGTH (128 * OUTPUT_CHANNEL_COUNT) // 128 bits of buffer per channel seems to be the sweet spot
+// at 64 the copy routine takes a little too long
+// at 256 there are data errors? Not sure why
 
 #define TIM_DCR_DBL_4_TRANSFERS (3 << 8)
 #define TIM_DCR_DBA_CCR1 13
@@ -140,7 +142,7 @@ static void flip(void) {
 
 void output_write(void) {
     // Wait for both DMA channels to be idle
-    hal_set_led(7);
+    //hal_set_led(7);
     for (;;) {
         int t;
         for (t = 0; t < TIMER_COUNT; t++) {
@@ -148,7 +150,7 @@ void output_write(void) {
         }
         if (t >= TIMER_COUNT) break;
     }
-    hal_clear_led(7);
+    //hal_clear_led(7);
 
     flip();
 
@@ -192,7 +194,7 @@ void output_update_indicators(void) {
     if (byte_counter[0]) hal_set_led(1); else hal_clear_led(1);
     if (byte_counter[1]) hal_set_led(0); else hal_clear_led(0);
     if (byte_counter[2]) hal_set_led(6); else hal_clear_led(6);
-    if (byte_counter[3]) hal_set_led(0); else hal_clear_led(0); // 7
+    if (byte_counter[3]) hal_set_led(7); else hal_clear_led(7);
     if (byte_counter[4]) hal_set_led(5); else hal_clear_led(5);
     if (byte_counter[5]) hal_set_led(4); else hal_clear_led(4);
     if (byte_counter[6]) hal_set_led(3); else hal_clear_led(3);
@@ -211,26 +213,19 @@ static inline __attribute__((always_inline)) void fill_dma_buffer(uint8_t* start
                 //    datum <<= 1;
                 //    cur += 4;
                 //}
-                *cur = (datum & 0x80) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                cur += 4;
-                *cur = (datum & 0x40) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                cur += 4;
-                *cur = (datum & 0x20) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                cur += 4;
-                *cur = (datum & 0x10) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                cur += 4;
-                *cur = (datum & 0x08) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                cur += 4;
-                *cur = (datum & 0x04) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                cur += 4;
-                *cur = (datum & 0x02) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                cur += 4;
-                *cur = (datum & 0x01) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
-                cur += 4;
+                cur[0] = (datum & 0x80) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur[4] = (datum & 0x40) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur[8] = (datum & 0x20) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur[12] = (datum & 0x10) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur[16] = (datum & 0x08) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur[20] = (datum & 0x04) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur[24] = (datum & 0x02) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur[28] = (datum & 0x01) ? PULSE_WIDTH_1 : PULSE_WIDTH_0;
+                cur += 32;
                 data_pointer[c + offset]++;
                 byte_counter[c + offset]--;
             } else {
-                for (int b = 7; b >= 0; b--) {
+                for (int b = 0; b < 8; b++) {
                     *cur = 0;
                     cur += 4;
                 }
@@ -242,9 +237,9 @@ static inline __attribute__((always_inline)) void fill_dma_buffer(uint8_t* start
     }
 }
 
-static volatile uint32_t a;
+static uint32_t a;
 
-void dma1_channel2_isr(void) {
+void __attribute__((used)) dma1_channel2_isr(void) {
     if (!reset_counter[0] && !reset_counter[1]
      && !reset_counter[2] && !reset_counter[3]) {
         // Need to ensure the DMA gets written one last time
