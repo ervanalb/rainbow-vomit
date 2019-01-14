@@ -15,7 +15,9 @@ So I should be able to run smooth video on a 8192 LED setup without even diving 
 For some reason, most simple drivers can't come close to these specs. Respect for the [Pixel Pusher](http://www.heroicrobotics.com/products/pixelpusher) though, it's just large, expensive, and uses Ethernet.
 
 ## How?
-I think I can trick the STM32F105 into doing this for me. It's gonna take a lot of fiddling with the DMA engine, but I'm confident I can extend the approach [here](https://github.com/ervanalb/lux/blob/master/led_strip_firmware/app/src/ws2811_strip.c) to 8 channels (that example works plenty fast on a F0 at 48 MHz).
+I tricked the STM32F105 into doing this for me. It took a lot of fiddling with the DMA engine and USB peripheral. It's an extension of the approach [here](https://github.com/ervanalb/lux/blob/master/led_strip_firmware/app/src/ws2811_strip.c) to 8 channels (all four channels on two timers.)
+
+I've included a [binary](driver-firmware/rainbow-vomit-driver.bin) in the git repository because the timing is very finicky and you may not get full speed on your compiler.
 
 ## Anything else?
 Why yes, thanks for asking.
@@ -27,5 +29,5 @@ This will operate entirely on the WS2812 protocol, so you can use any driver, no
 
 I also find it weird that this doesn't exist yet.
 
-## And then what?
+## Now what?
 Maybe Adafruit or Sparkfun will steal my design and mass produce it. That would be cool.
