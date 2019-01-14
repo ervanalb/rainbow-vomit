@@ -6,37 +6,37 @@ The lengths are little-endian and are in bytes, so multiply the number of RGB pi
 
 Metadata format:
 
-<table><tr>
- <td>Channel 0 length LSB</td>
- <td>Channel 0 length MSB</td>
- <td>Channel 1 length LSB</td>
- <td>Channel 1 length MSB</td>
- <td>...</td>
- <td>Channel 7 length LSB</td>
- <td>Channel 7 length MSB</td>
-</tr></table>
+<table>
+ <tr><td>Channel 0 length LSB</td></tr>
+ <tr><td>Channel 0 length MSB</td></tr>
+ <tr><td>Channel 1 length LSB</td></tr>
+ <tr><td>Channel 1 length MSB</td></tr>
+ <tr><td>...</td></tr>
+ <tr><td>Channel 7 length LSB</td></tr>
+ <tr><td>Channel 7 length MSB</td></tr>
+</table>
 
 Immediately following the metadata is the pixel data in the following format:
 
-<table><tr>
- <td>Channel 0 byte 0 *(e.g. LED 0 Red)*</td>
- <td>Channel 0 byte 1 *(e.g. LED 0 Green)*</td>
- <td>Channel 0 byte 2 *(e.g. LED 0 Blue)*</td>
- <td>Channel 0 byte 3 *(e.g. LED 1 Red)*</td>
- <td>Channel 0 byte 4 *(e.g. LED 1 Green)*</td>
- <td>Channel 0 byte 5 *(e.g. LED 1 Blue)*</td>
- <td>...</td>
- <td>Channel 0 byte (Channel 0 length - 3)</td>
- <td>Channel 0 byte (Channel 0 length - 2)</td>
- <td>Channel 0 byte (Channel 0 length - 1)</td>
- <td>Channel 1 byte 0</td>
- <td>Channel 1 byte 1</td>
- <td>Channel 1 byte 2</td>
- <td>...</td>
- <td>Channel 7 byte (Channel 0 length - 1)</td>
- <td>Channel 7 byte (Channel 0 length - 1)</td>
- <td>Channel 7 byte (Channel 0 length - 1)</td>
-</tr></table>
+<table>
+ <tr><td>Channel 0 byte 0 *(e.g. LED 0 Red)*</td></tr>
+ <tr><td>Channel 0 byte 1 *(e.g. LED 0 Green)*</td></tr>
+ <tr><td>Channel 0 byte 2 *(e.g. LED 0 Blue)*</td></tr>
+ <tr><td>Channel 0 byte 3 *(e.g. LED 1 Red)*</td></tr>
+ <tr><td>Channel 0 byte 4 *(e.g. LED 1 Green)*</td></tr>
+ <tr><td>Channel 0 byte 5 *(e.g. LED 1 Blue)*</td></tr>
+ <tr><td>...</td></tr>
+ <tr><td>Channel 0 byte (Channel 0 length - 3)</td></tr>
+ <tr><td>Channel 0 byte (Channel 0 length - 2)</td></tr>
+ <tr><td>Channel 0 byte (Channel 0 length - 1)</td></tr>
+ <tr><td>Channel 1 byte 0</td></tr>
+ <tr><td>Channel 1 byte 1</td></tr>
+ <tr><td>Channel 1 byte 2</td></tr>
+ <tr><td>...</td></tr>
+ <tr><td>Channel 7 byte (Channel 0 length - 1)</td></tr>
+ <tr><td>Channel 7 byte (Channel 0 length - 1)</td></tr>
+ <tr><td>Channel 7 byte (Channel 0 length - 1)</td></tr>
+</table>
 
 Once the predetermined amount of data has been received,
 the frame will begin to be written out to the LED strips.
