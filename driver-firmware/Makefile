@@ -49,6 +49,10 @@ CFILES += libopencm3/lib/cm3/assert.c
 CFILES += libopencm3/lib/cm3/sync.c
 CFILES += libopencm3/lib/cm3/dwt.c
 
+CFILES += fatfs/ff.c
+CFILES += fatfs/ffsystem.c
+CFILES += fatfs/ffunicode.c
+
 CFILES += src/main.c
 CFILES += src/hal.c
 CFILES += src/protocol.c

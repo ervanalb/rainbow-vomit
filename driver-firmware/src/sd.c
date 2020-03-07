@@ -87,15 +87,15 @@ static u8 crc7_one(u8 t, u8 data)
 	return t;
 }
 
-static u8 crc7(const u8 *p, int len)
-{
-	int j;
-	u8 crc = 0;
-	for (j=0; j<len; j++)
-		crc = crc7_one(crc, p[j]);
-
-	return crc>>1;
-}
+//static u8 crc7(const u8 *p, int len)
+//{
+//	int j;
+//	u8 crc = 0;
+//	for (j=0; j<len; j++)
+//		crc = crc7_one(crc, p[j]);
+//
+//	return crc>>1;
+//}
 
 /* http://www.eagleairaust.com.au/code/crc16.htm */
 static u16 crc16_ccitt(u16 crc, u8 ser_data)
@@ -860,12 +860,14 @@ static int sd_write(hwif* hw, u32 address,const u8 *buf)
 
 /*** fatfs code that uses the public API ***/
 
-#include "diskio.h"
+#include "fatfs/ff.h"
+#include "fatfs/diskio.h"
 
 hwif hw;
 
 DSTATUS disk_initialize(BYTE drv)
 {
+    (void)drv;
 	if (hwif_init(&hw) == 0)
 		return 0;
 
@@ -875,6 +877,7 @@ DSTATUS disk_initialize(BYTE drv)
 
 DSTATUS disk_status(BYTE drv)
 {
+    (void)drv;
 	if (hw.initialized)
 		return 0;
 
@@ -884,7 +887,8 @@ DSTATUS disk_status(BYTE drv)
 
 DRESULT disk_read(BYTE drv, BYTE *buff, DWORD sector, UINT count)
 {
-	int i;
+    (void)drv;
+	UINT i;
 
 	for (i=0; i<count; i++)
 		if (sd_read(&hw, sector+i, buff+512*i) != 0)
@@ -893,11 +897,10 @@ DRESULT disk_read(BYTE drv, BYTE *buff, DWORD sector, UINT count)
 	return RES_OK;
 }
 
-
-#if _READONLY == 0
 DRESULT disk_write(BYTE drv, const BYTE *buff, DWORD sector, UINT count)
 {
-	int i;
+    (void)drv;
+	UINT i;
 
 	for (i=0; i<count; i++)
 		if (sd_write(&hw, sector+i, buff+512*i) != 0)
@@ -905,12 +908,10 @@ DRESULT disk_write(BYTE drv, const BYTE *buff, DWORD sector, UINT count)
 
 	return RES_OK;
 }
-#endif /* _READONLY */
-
-
 
 DRESULT disk_ioctl(BYTE drv, BYTE ctrl, void *buff)
 {
+    (void)drv;
 	switch (ctrl) {
 	case CTRL_SYNC:
 		return RES_OK;
