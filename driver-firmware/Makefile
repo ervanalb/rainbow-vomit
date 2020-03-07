@@ -53,8 +53,9 @@ CFILES += src/main.c
 CFILES += src/hal.c
 CFILES += src/protocol.c
 CFILES += src/output.c
+CFILES += src/sd.c
 
-OPT = -O3
+OPT = -O3 # XXX O3
 CFLAGS += -flto
 #CFLAGS += -funroll-loops
 LDFLAGS += -Xlinker -Map=$(PROJECT).map
