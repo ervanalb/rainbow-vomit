@@ -6,7 +6,6 @@ CFILES =
 CFILES += libopencm3/lib/stm32/f1/adc.c
 CFILES += libopencm3/lib/stm32/common/adc_common_v1.c
 CFILES += libopencm3/lib/stm32/can.c
-CFILES += libopencm3/lib/stm32/desig.c
 CFILES += libopencm3/lib/stm32/f1/flash.c
 CFILES += libopencm3/lib/stm32/f1/gpio.c
 CFILES += libopencm3/lib/stm32/f1/rcc.c

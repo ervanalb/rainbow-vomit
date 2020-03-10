@@ -16,8 +16,6 @@ static int sd_startup(void) {
     fr = f_open(&file, "0:leds.dat", FA_READ);
     if(fr) return fr;
 
-    disk_initialize(0);
-
     for(;;) {
         while (!f_eof(&file)) {
             fr = f_read(&file, output_buffer, PROTOCOL_METADATA_SIZE, &n);

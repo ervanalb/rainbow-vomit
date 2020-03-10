@@ -75,8 +75,10 @@ void output_init(void) {
 
     // For each (TIM2, TIM3)
     for (int t = 0; t < TIMER_COUNT; t++) {
+        timer_set_mode(TIMS[t], TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
+        timer_disable_preload(TIMS[t]);
+        timer_continuous_mode(TIMS[t]);
         timer_set_period(TIMS[t], PULSE_PERIOD);
-        timer_enable_break_main_output(TIMS[t]);
         TIM_DCR(TIMS[t]) = TIM_DCR_DBL_4_TRANSFERS | TIM_DCR_DBA_CCR1;
         timer_set_dma_on_update_event(TIMS[t]);
         timer_enable_irq(TIMS[t], TIM_DIER_UDE);
@@ -141,6 +143,26 @@ static void flip(void) {
 }
 
 void output_write(void) {
+
+/*
+    // Adding NOPs here causes data corruption
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    __asm__ volatile ("mov r0,r0");
+    static volatile int a;
+    for (a = 0; a < 100000; a++);
+*/
+
     // Wait for both DMA channels to be idle
     //hal_set_led(7);
     for (;;) {
@@ -151,9 +173,6 @@ void output_write(void) {
         if (t >= TIMER_COUNT) break;
     }
     //hal_clear_led(7);
-
-    //static volatile int a=0;
-    //for (a=0; a < 0; a++);
 
     flip();
 
@@ -243,6 +262,7 @@ static inline __attribute__((always_inline)) void fill_dma_buffer(uint8_t* start
 static uint32_t a;
 
 void __attribute__((used)) dma1_channel2_isr(void) {
+    //hal_set_led(7);
     if (!reset_counter[0] && !reset_counter[1]
      && !reset_counter[2] && !reset_counter[3]) {
         // Need to ensure the DMA gets written one last time
@@ -265,9 +285,11 @@ void __attribute__((used)) dma1_channel2_isr(void) {
         fill_dma_buffer(pulse_buffer[0] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 0);
         DMA1_IFCR = DMA_ISR_TCIF2;
     }
+    //hal_clear_led(7);
 }
 
 void __attribute__((used)) dma1_channel3_isr(void) {
+    //hal_set_led(6);
     if (!reset_counter[4] && !reset_counter[5]
      && !reset_counter[6] && !reset_counter[7]) {
         // Need to ensure the DMA gets written one last time
@@ -290,4 +312,5 @@ void __attribute__((used)) dma1_channel3_isr(void) {
         fill_dma_buffer(pulse_buffer[1] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 4);
         DMA1_IFCR = DMA_ISR_TCIF3;
     }
+    //hal_clear_led(6);
 }

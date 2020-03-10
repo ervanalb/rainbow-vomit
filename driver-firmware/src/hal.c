@@ -290,7 +290,7 @@ void hal_init() {
     rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_OTGFS);
 
-    //SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_PRIGROUP_GROUP4_SUB4;
+    scb_set_priority_grouping(SCB_AIRCR_PRIGROUP_GROUP4_SUB4);
 
     for (int i = 0; i < (int)(sizeof (LED_PINS) / sizeof (LED_PINS[0])); i++) {
         gpio_set_mode(LED_GPIOS[i], GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_PINS[i]);
@@ -307,7 +307,7 @@ void hal_init() {
 		       sizeof(usbd_control_buffer));
     usbd_register_set_config_callback(usbd_dev_handle, cdcacm_set_config);
 
-    nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 4);
+    nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 6); // Interrupt priority uses highest order bits
     nvic_enable_irq(NVIC_OTG_FS_IRQ);
 }
 
