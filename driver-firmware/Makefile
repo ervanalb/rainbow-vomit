@@ -59,11 +59,12 @@ CFILES += src/protocol.c
 CFILES += src/output.c
 CFILES += src/sd.c
 
-OPT = -O3 # XXX O3
+OPT = -O3
 CFLAGS += -flto
 #CFLAGS += -funroll-loops
 LDFLAGS += -Xlinker -Map=$(PROJECT).map
 LDFLAGS += -flto
+LDFLAGS += -ggdb3
 
 INCLUDES += -Isrc
 

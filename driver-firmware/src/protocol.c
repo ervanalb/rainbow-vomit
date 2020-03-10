@@ -33,17 +33,7 @@ again:
     }
     if (ctr < PROTOCOL_METADATA_SIZE && ctr + len >= PROTOCOL_METADATA_SIZE) {
         // Metadata is complete
-        output_start[0] = PROTOCOL_METADATA_SIZE;
-        packet_len = PROTOCOL_METADATA_SIZE;
-        for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
-            uint16_t length;
-            memcpy(&length, &output_buffer[i * sizeof (length)], sizeof (length));
-            output_length[i] = length;
-            if (i > 0) {
-                output_start[i] = output_start[i - 1] + output_length[i - 1];
-            }
-            packet_len += output_length[i];
-        }
+        packet_len = protocol_unpack_metadata();
     }
     if (ctr + len < packet_len) {
         // Packet is not complete
@@ -68,4 +58,19 @@ again:
     }
 
     //hal_clear_led(2);
+}
+
+int protocol_unpack_metadata() {
+    output_start[0] = PROTOCOL_METADATA_SIZE;
+    int total_len = PROTOCOL_METADATA_SIZE;
+    for (int i = 0; i < OUTPUT_CHANNEL_COUNT; i++) {
+        uint16_t length;
+        memcpy(&length, &output_buffer[i * sizeof (length)], sizeof (length));
+        output_length[i] = length;
+        if (i > 0) {
+            output_start[i] = output_start[i - 1] + output_length[i - 1];
+        }
+        total_len += output_length[i];
+    }
+    return total_len;
 }

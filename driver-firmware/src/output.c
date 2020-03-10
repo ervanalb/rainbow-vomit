@@ -102,7 +102,7 @@ void output_init(void) {
         dma_set_memory_size(DMA1, DMA_CHANNELS[t], DMA_CCR_MSIZE_8BIT);
         dma_enable_memory_increment_mode(DMA1, DMA_CHANNELS[t]);
         dma_enable_circular_mode(DMA1, DMA_CHANNELS[t]);
-        dma_set_priority(DMA1, DMA_CHANNELS[t], DMA_CCR_PL_HIGH);
+        dma_set_priority(DMA1, DMA_CHANNELS[t], DMA_CCR_PL_VERY_HIGH);
 
         dma_enable_half_transfer_interrupt(DMA1, DMA_CHANNELS[t]);
         dma_enable_transfer_complete_interrupt(DMA1, DMA_CHANNELS[t]);
@@ -151,6 +151,9 @@ void output_write(void) {
         if (t >= TIMER_COUNT) break;
     }
     //hal_clear_led(7);
+
+    //static volatile int a=0;
+    //for (a=0; a < 0; a++);
 
     flip();
 

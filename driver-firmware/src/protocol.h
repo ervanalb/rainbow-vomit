@@ -10,3 +10,4 @@ struct _usbd_device;
 
 void protocol_init(void);
 void protocol_rx(struct _usbd_device *usbd_dev, uint8_t ep);
+int protocol_unpack_metadata(void);

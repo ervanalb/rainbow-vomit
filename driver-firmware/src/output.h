@@ -3,7 +3,8 @@
 #include "protocol.h"
 
 #define OUTPUT_CHANNEL_COUNT 8
-#define OUTPUT_BUFFER_SIZE (OUTPUT_CHANNEL_COUNT * 1024 * 3 + PROTOCOL_OVERHEAD)
+// XX 1024
+#define OUTPUT_BUFFER_SIZE (OUTPUT_CHANNEL_COUNT * 256 * 3 + PROTOCOL_OVERHEAD)
 
 extern uint8_t *output_buffer;
 extern int *output_start;
