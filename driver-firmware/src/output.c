@@ -13,9 +13,8 @@
 #define PULSE_WIDTH_1 (45 + RISETIME)
 #define RESET_CYCLES 6 // Minimum is 40 bit periods, so 5 byte periods
 
-#define PULSE_BUFFER_LENGTH (128 * OUTPUT_CHANNEL_COUNT) // 128 bits of buffer per channel seems to be the sweet spot
-// at 64 the copy routine takes a little too long
-// at 256 there are data errors? Not sure why
+#define PULSE_BUFFER_LENGTH (256 * OUTPUT_CHANNEL_COUNT) // 128 bits of buffer per channel minimum
+// (at 64 the copy routine takes a little too long)
 
 #define TIM_DCR_DBL_4_TRANSFERS (3 << 8)
 #define TIM_DCR_DBA_CCR1 13

@@ -33,7 +33,21 @@ static uint8_t spi_txrx(uint8_t data) {
 	SPI_DR(SPI1) = data;
 
 	// Wait for transfer finished
-	while (!(SPI_SR(SPI1) & SPI_SR_RXNE));
+    do {
+        // These NOPs are critically important!
+        // Busy-polling the SPI peripheral without them consumes too much memory bandwidth on the AHB.
+        // This causes the DMA to the timer peripherals to miss cycles, leading to data corruption on the LEDs.
+        // Ideally, we would put exactly as many here as are necessary to prevent the loop's exit condition from ever being true,
+        // which would reduce AHB usage as much as possible.
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+    } while (!(SPI_SR(SPI1) & SPI_SR_RXNE));
 
 	// Read the data
 	return SPI_DR(SPI1);

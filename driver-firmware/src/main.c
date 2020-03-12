@@ -38,9 +38,9 @@ int main(void) {
     protocol_init();
     output_init();
 
-    sd_startup(); // XXX
+    //sd_startup(); // XXX
 
     for (;;) {
-        output_update_indicators();
+        //output_update_indicators();
     }
 }
