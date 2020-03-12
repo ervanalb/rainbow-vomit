@@ -1,4 +1,6 @@
 # Protocol
+
+## USB protocol
 The LED strip driver enumerates as a virtual serial port.
 
 Each frame consists of a 16-byte chunk of metadata, followed by the pixel data. The metadata must be sent every frame, and contains the length for each channel.
@@ -42,6 +44,25 @@ Once the predetermined amount of data has been received,
 the frame will begin to be written out to the LED strips.
 
 If the protocol gets out of sync, simply frob any control line of the serial port, for example, RTS. Closing and re-opening the serial port should also work.
+
+## SD card protocol
+The LED strip driver has an microSD card slot. It can read cards with a FAT filesystem. Right now it only looks for the `leds.dat` file.
+
+The file follows the same protocol as above, but with the addition of a 2-byte frame time in milliseconds prepended to the metadata.
+
+<table>
+ <tr><td>Frame time LSB</td></tr>
+ <tr><td>Frame time MSB</td></tr>
+ <tr><td>16 byte metadata *(see above)*</td></tr>
+ <tr><td>Pixel data *(see above)*</td></tr>
+</table>
+
+The frame time is unsigned and ranges from 0 ms - 65534 ms.
+Setting the frame time to 65535 indicates that the frame should be shown indefinitely.
+Setting the frame time to 0 indicates that the frame should be shown for as little time as possible.
+Depending on the quantity of data, the board may not be able to keep up with the requested frame rate.
+Frames that last longer than 60 seconds are possible by sending subsequent empty frames (0 bytes on every channel).
+When the end of the file is reached, it will loop. To prevent this behavior, set the last frame time to 65535.
 
 ## Frame buffers
 The output is double-buffered, so reception of a new frame command can be started immediately while the previous frame is being output.
