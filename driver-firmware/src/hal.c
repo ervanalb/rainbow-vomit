@@ -6,6 +6,7 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/lib/usb/usb_private.h>
+#include <libopencm3/cm3/systick.h>
 #include <stddef.h>
 
 // This hack gets us access to
@@ -215,6 +216,9 @@ static const char *usb_strings[] = {
 /* Buffer to be used for control requests. */
 uint8_t usbd_control_buffer[128];
 
+// Counter for SysTick
+static volatile uint32_t timer;
+
 static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_dev_handle,
 				  struct usb_setup_data *req,
 				  uint8_t **buf,
@@ -309,8 +313,26 @@ void hal_init() {
 
     nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 6); // Interrupt priority uses highest order bits
     nvic_enable_irq(NVIC_OTG_FS_IRQ);
+
+    // SysTick init
+    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+    systick_set_reload(8999); // 72 MHz / 8 / 9000 = 1 KHz
+    systick_interrupt_enable();
+    systick_counter_enable();
+}
+
+void hal_reset_timer(void) {
+    timer = 0;
+}
+
+uint32_t hal_get_timer(void) {
+    return timer;
 }
 
 void __attribute__((used)) otg_fs_isr() {
     usbd_poll(usbd_dev_handle);
+}
+
+void __attribute__((used)) sys_tick_handler() {
+    timer++;
 }

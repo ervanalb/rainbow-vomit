@@ -14,12 +14,19 @@ int autorun(void) {
     FIL file;
     UINT n;
 
+    uint16_t time;
+
     f_mount(&fatfs, "", 0);
     fr = f_open(&file, "0:leds.dat", FA_READ);
     if(fr) return fr;
 
+    hal_reset_timer();
+
     for(;;) {
         while (!f_eof(&file)) {
+            fr = f_read(&file, &time, sizeof (time), &n);
+            if (fr) return fr;
+            if (n < sizeof (time)) return -1;
             fr = f_read(&file, output_buffer, PROTOCOL_METADATA_SIZE, &n);
             if (fr) return fr;
             if (n < PROTOCOL_METADATA_SIZE) return -1;
@@ -33,9 +40,14 @@ int autorun(void) {
             } else {
                 return -1;
             }
+            if (time == 0xFFFF) {
+                for (;;) {}
+            } else {
+                while (hal_get_timer() < time) {}
+                hal_reset_timer();
+            }
         }
         f_lseek(&file, 0);
     }
 }
-
 
