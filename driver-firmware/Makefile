@@ -57,6 +57,7 @@ CFILES += src/hal.c
 CFILES += src/protocol.c
 CFILES += src/output.c
 CFILES += src/sd.c
+CFILES += src/autorun.c
 
 OPT = -O3
 CFLAGS += -flto

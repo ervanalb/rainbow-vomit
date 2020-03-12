@@ -1,8 +1,9 @@
 #include "protocol.h"
 #include "output.h"
+#include "hal.h"
+#include "autorun.h"
 #include <string.h>
 #include <libopencm3/usb/usbd.h>
-#include "hal.h"
 
 #define CMD_FRAME   0x00
 #define CMD_LENGTHS 0x01
@@ -19,6 +20,9 @@ void protocol_init() {
 
 void protocol_rx(usbd_device *usbd_dev, uint8_t ep) {
     (void)ep;
+
+    // Disable SD card reading
+    autorunning = 0;
 
     //hal_set_led(2);
 

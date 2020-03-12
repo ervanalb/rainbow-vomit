@@ -1,4 +1,7 @@
-#include "sd.h"
+// This is the low-level SD card driver
+// It implements the functions necessary for ChaN's FatFS to work.
+// See autorun.c for high-level SD card functionality
+
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/spi.h>
@@ -39,7 +42,6 @@ static uint8_t spi_txrx(uint8_t data) {
         // This causes the DMA to the timer peripherals to miss cycles, leading to data corruption on the LEDs.
         // Ideally, we would put exactly as many here as are necessary to prevent the loop's exit condition from ever being true,
         // which would reduce AHB usage as much as possible.
-        __asm__ volatile ("mov r0, r0");
         __asm__ volatile ("mov r0, r0");
         __asm__ volatile ("mov r0, r0");
         __asm__ volatile ("mov r0, r0");

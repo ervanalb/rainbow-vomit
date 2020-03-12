@@ -16,6 +16,9 @@
 #define PULSE_BUFFER_LENGTH (256 * OUTPUT_CHANNEL_COUNT) // 128 bits of buffer per channel minimum
 // (at 64 the copy routine takes a little too long)
 
+#define INDICATOR_PERIOD 18000
+#define INDICATOR_PRESCALER 8
+
 #define TIM_DCR_DBL_4_TRANSFERS (3 << 8)
 #define TIM_DCR_DBA_CCR1 13
 
@@ -44,7 +47,7 @@ static int *display_length;
 static uint8_t pulse_buffer[TIMER_COUNT][PULSE_BUFFER_LENGTH];
 
 static uint8_t* data_pointer[8];
-static int byte_counter[8];
+static volatile int byte_counter[8];
 static int reset_counter[8];
 static int dma_flush_counter[TIMER_COUNT];
 
@@ -58,6 +61,7 @@ void output_init(void) {
     // Set up hardware
     rcc_periph_clock_enable(RCC_TIM2);
     rcc_periph_clock_enable(RCC_TIM3);
+    rcc_periph_clock_enable(RCC_TIM4);
     rcc_periph_clock_enable(RCC_DMA1);
 
     // Pulses out to strip
@@ -113,6 +117,18 @@ void output_init(void) {
     nvic_enable_irq(NVIC_DMA1_CHANNEL2_IRQ);
     nvic_set_priority(NVIC_DMA1_CHANNEL3_IRQ, 0);
     nvic_enable_irq(NVIC_DMA1_CHANNEL3_IRQ);
+
+    // Set up a low-priority timer to fire about every 2ms to update the status LEDs
+
+    timer_set_mode(TIM4, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
+    timer_disable_preload(TIM4);
+    timer_continuous_mode(TIM4);
+    timer_set_prescaler(TIM4, INDICATOR_PRESCALER - 1);
+    timer_set_period(TIM4, INDICATOR_PERIOD);
+    timer_enable_irq(TIM4, TIM_DIER_UIE);
+    nvic_set_priority(NVIC_TIM4_IRQ, 2 << 6);
+    nvic_enable_irq(NVIC_TIM4_IRQ);
+    timer_enable_counter(TIM4);
 }
 
 void output_clear(void) {
@@ -261,7 +277,6 @@ static inline __attribute__((always_inline)) void fill_dma_buffer(uint8_t* start
 static uint32_t a;
 
 void __attribute__((used)) dma1_channel2_isr(void) {
-    //hal_set_led(7);
     if (!reset_counter[0] && !reset_counter[1]
      && !reset_counter[2] && !reset_counter[3]) {
         // Need to ensure the DMA gets written one last time
@@ -284,11 +299,9 @@ void __attribute__((used)) dma1_channel2_isr(void) {
         fill_dma_buffer(pulse_buffer[0] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 0);
         DMA1_IFCR = DMA_ISR_TCIF2;
     }
-    //hal_clear_led(7);
 }
 
 void __attribute__((used)) dma1_channel3_isr(void) {
-    //hal_set_led(6);
     if (!reset_counter[4] && !reset_counter[5]
      && !reset_counter[6] && !reset_counter[7]) {
         // Need to ensure the DMA gets written one last time
@@ -311,5 +324,9 @@ void __attribute__((used)) dma1_channel3_isr(void) {
         fill_dma_buffer(pulse_buffer[1] + PULSE_BUFFER_LENGTH / 2, PULSE_BUFFER_LENGTH / 2, 4);
         DMA1_IFCR = DMA_ISR_TCIF3;
     }
-    //hal_clear_led(6);
+}
+
+void __attribute__((used)) tim4_isr(void) {
+    output_update_indicators();
+    timer_clear_flag(TIM4, TIM_SR_UIF);
 }
