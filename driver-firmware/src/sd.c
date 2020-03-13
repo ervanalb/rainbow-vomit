@@ -18,10 +18,10 @@ static void spi_set_speed(enum sd_speed speed) {
     spi_enable_software_slave_management(SPI1);
     spi_enable_ss_output(SPI1);
 
-    uint32_t br = SPI_CR1_BAUDRATE_FPCLK_DIV_128;
+    uint32_t br = SPI_CR1_BAUDRATE_FPCLK_DIV_256;
     switch (speed) {
         case SD_SPEED_25MHZ:
-            br = SPI_CR1_BAUDRATE_FPCLK_DIV_2;
+            br = SPI_CR1_BAUDRATE_FPCLK_DIV_4;
             break;
         case SD_SPEED_400KHZ:
             break;
@@ -53,6 +53,77 @@ static uint8_t spi_txrx(uint8_t data) {
 
 	// Read the data
 	return SPI_DR(SPI1);
+}
+
+static inline __attribute__((always_inline)) void spi_tx_16(uint16_t data) {
+	SPI_DR(SPI1) = data;
+}
+
+static inline __attribute__((always_inline)) uint16_t spi_rx_16(void) {
+	// Wait for transfer finished
+    do {
+        // These NOPs are critically important!
+        // Busy-polling the SPI peripheral without them consumes too much memory bandwidth on the AHB.
+        // This causes the DMA to the timer peripherals to miss cycles, leading to data corruption on the LEDs.
+        // Ideally, we would put exactly as many here as are necessary to prevent the loop's exit condition from ever being true,
+        // which would reduce AHB usage as much as possible.
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+    } while (!(SPI_SR(SPI1) & SPI_SR_RXNE));
+
+	// Read the data
+	return SPI_DR(SPI1);
+}
+
+static inline __attribute__((always_inline)) uint16_t spi_rxtx_16(uint16_t data) {
+	// Wait for transfer finished
+    do {
+        // These NOPs are critically important!
+        // Busy-polling the SPI peripheral without them consumes too much memory bandwidth on the AHB.
+        // This causes the DMA to the timer peripherals to miss cycles, leading to data corruption on the LEDs.
+        // Ideally, we would put exactly as many here as are necessary to prevent the loop's exit condition from ever being true,
+        // which would reduce AHB usage as much as possible.
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+        __asm__ volatile ("mov r0, r0");
+    } while (!(SPI_SR(SPI1) & SPI_SR_RXNE));
+
+    // TX a new word ASAP
+	SPI_DR(SPI1) = data;
+
+	// Read the data
+	return SPI_DR(SPI1);
+}
+
+static void spi_txrx_many(uint8_t *data, int len) {
+    spi_set_dff_16bit(SPI1);
+
+    int i;
+    spi_tx_16(0xffff);
+    for (i=0; i<len-3; i+=2) {
+        uint16_t v = spi_rx_16();
+        spi_tx_16(0xffff);
+        data[i + 0] = v >> 8;
+        data[i + 1] = v & 0xFF;
+    }
+    uint16_t v = spi_rx_16();
+    data[i++] = v >> 8;
+    data[i++] = v & 0xFF;
+
+    spi_set_dff_8bit(SPI1);
+
+    if (i < len) {
+        data[i] = spi_txrx(0xff);
+    }
 }
 
 static void spi_cs_low(void) {
@@ -531,8 +602,12 @@ static int sd_get_data(hwif *hw, u8 *buf, int len)
 	if (tries < 0)
 		return -1;
 
-	for (i=0; i<len; i++)
-		buf[i] = spi_txrx(0xff);
+    if (len > 8) {
+        spi_txrx_many(buf, len);
+    } else {
+        for (i=0; i<len; i++)
+            buf[i] = spi_txrx(0xff);
+    }
 
 	_crc16 = spi_txrx(0xff) << 8;
 	_crc16 |= spi_txrx(0xff);
