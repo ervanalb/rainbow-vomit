@@ -13,7 +13,7 @@
 #define PULSE_WIDTH_1 (45 + RISETIME)
 #define RESET_CYCLES 6 // Minimum is 40 bit periods, so 5 byte periods
 
-#define PULSE_BUFFER_LENGTH (256 * OUTPUT_CHANNEL_COUNT) // 128 bits of buffer per channel minimum
+#define PULSE_BUFFER_LENGTH (512 * OUTPUT_CHANNEL_COUNT) // 128 bits of buffer per channel minimum
 // (at 64 the copy routine takes a little too long)
 
 #define INDICATOR_PERIOD 18000

@@ -302,17 +302,17 @@ void hal_init() {
 
     // USB init
 
-    usbd_dev_handle = usbd_init(&custom_usb_driver,
-		       &dev,
-		       &config,
-		       usb_strings,
-		       3,
-		       usbd_control_buffer,
-		       sizeof(usbd_control_buffer));
-    usbd_register_set_config_callback(usbd_dev_handle, cdcacm_set_config);
+    //usbd_dev_handle = usbd_init(&custom_usb_driver,
+	//	       &dev,
+	//	       &config,
+	//	       usb_strings,
+	//	       3,
+	//	       usbd_control_buffer,
+	//	       sizeof(usbd_control_buffer));
+    //usbd_register_set_config_callback(usbd_dev_handle, cdcacm_set_config);
 
-    nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 6); // Interrupt priority uses highest order bits
-    nvic_enable_irq(NVIC_OTG_FS_IRQ);
+    //nvic_set_priority(NVIC_OTG_FS_IRQ, 1 << 6); // Interrupt priority uses highest order bits
+    //nvic_enable_irq(NVIC_OTG_FS_IRQ);
 
     // SysTick init
     systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);

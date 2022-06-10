@@ -73,11 +73,11 @@ DEVICE=stm32f105r8t6
 OPENCM3_DIR=libopencm3
 
 include $(OPENCM3_DIR)/mk/genlink-config.mk
-LDLIBS = 
+LDLIBS = -lm
 include rules.mk
 include $(OPENCM3_DIR)/mk/genlink-rules.mk
 
-.PHONY: gdb load loadquit
+.PHONY: gdb load loadquit dfuload
 
 gdb: $(PROJECT).elf
 	$(PREFIX)gdb $(PROJECT).elf -x init.gdb
@@ -85,3 +85,7 @@ load: $(PROJECT).elf
 	$(PREFIX)gdb $(PROJECT).elf -x init.gdb -ex load
 loadquit: $(PROJECT).elf
 	$(PREFIX)gdb $(PROJECT).elf -batch -x init.gdb -ex load -ex kill -ex quit
+$(PROJECT).bin: $(PROJECT).elf
+	arm-none-eabi-objcopy -O binary $(PROJECT).elf $(PROJECT).bin
+dfuload: $(PROJECT).bin
+	dfu-util -d 0483:df11 -a 0 -s 0x8000000 -D $(PROJECT).bin

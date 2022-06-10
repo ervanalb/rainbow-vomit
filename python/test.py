@@ -1,8 +1,9 @@
 import serial
 import struct
 import time
+import sys
 
-ser = serial.Serial("/dev/ttyACM0")
+ser = serial.Serial(sys.argv[1])
 
 def cobs_encode(data):
     output = b''
@@ -50,11 +51,14 @@ if __name__ == "__main__":
 
     l = 1024 * 3
 
+    a = 0.01
     while True:
+        b = [0] * l
+        #for i in [16, 17, 22, 23, 24, 30, 31]:
         for i in range(50):
-            b = [0] * l
-            b[i * 3] = 255
-            b[i * 3 + 1] = 255
-            b[i * 3 + 2] = 255
-            send(packetize([b, b, b, b, b, b, b, b]))
-            #time.sleep(0.1)
+            b[i * 3] = 1
+            b[i * 3 + 1] = 2
+            b[i * 3 + 2] = 2
+        send(packetize([b, [], [],[],[],[],[],[]]))
+        #time.sleep(0.1)
+        break
