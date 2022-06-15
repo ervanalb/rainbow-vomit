@@ -3,6 +3,10 @@
 #include "output.h"
 #include "string.h"
 #include "math.h"
+#include <stdbool.h>
+
+// Number of pixels
+#define N 500
 
 //static FATFS fatfs;
 
@@ -16,102 +20,134 @@ struct pixel_t {
     uint8_t b;
 };
 
-struct pixelf_t {
-    float r;
-    float g;
-    float b;
+
+// PRNG from https://stackoverflow.com/a/1180465
+static unsigned int prng(void)
+{
+   static unsigned int z1 = 12345, z2 = 12345, z3 = 12345, z4 = 12345;
+   unsigned int b;
+   b  = ((z1 << 6) ^ z1) >> 13;
+   z1 = ((z1 & 4294967294U) << 18) ^ b;
+   b  = ((z2 << 2) ^ z2) >> 27; 
+   z2 = ((z2 & 4294967288U) << 2) ^ b;
+   b  = ((z3 << 13) ^ z3) >> 21;
+   z3 = ((z3 & 4294967280U) << 7) ^ b;
+   b  = ((z4 << 3) ^ z4) >> 12;
+   z4 = ((z4 & 4294967168U) << 13) ^ b;
+   return (z1 ^ z2 ^ z3 ^ z4);
+}
+
+static const struct pixel_t COLORS[] = {
+    { // Red
+        .r = 20,
+        .g = 0,
+        .b = 0,
+    },
+    { // Orange
+        .r = 20,
+        .g = 2,
+        .b = 0,
+    },
+    { // Yellow
+        .r = 10,
+        .g = 5,
+        .b = 0,
+    },
+    { // Green
+        .r = 0,
+        .g = 10,
+        .b = 0,
+    },
+    { // Blue
+        .r = 0,
+        .g = 0,
+        .b = 10,
+    },
+    { // Purple
+        .r = 20,
+        .g = 0,
+        .b = 10,
+    },
 };
 
-static struct pixelf_t hsv2rgb(float h, float s, float v) {
-    // From https://gist.github.com/yoggy/8999625
+#define N_COLORS (sizeof (COLORS) / sizeof (COLORS[0]))
 
-    float r, g, b; // 0.0-1.0
-
-    h = fmodf(h, 1.0f);
-
-    int   hi = (int)(h * 6.f);
-    float f  = (h * 6.f) - hi;
-    float p  = v * (1.f - s);
-    float q  = v * (1.f - s * f);
-    float t  = v * (1.f - s * (1.f - f));
-
-    switch(hi) {
-        case 0: r = v, g = t, b = p; break;
-        case 1: r = q, g = v, b = p; break;
-        case 2: r = p, g = v, b = t; break;
-        case 3: r = p, g = q, b = v; break;
-        case 4: r = t, g = p, b = v; break;
-        case 5: r = v, g = p, b = q; break;
-    }
-
-    return (struct pixelf_t) {
-        .r = r,
-        .g = g,
-        .b = b,
-    };
-}
-
-static struct pixel_t convert_float_to_int(struct pixelf_t p) {
-    float rf = p.r;
-    float gf = p.g;
-    float bf = p.b;
-
-    if (rf > 1.f) {
-        rf = 1.f;
-    } else if (rf < 0.f) {
-        rf = 0.f;
-    }
-    if (gf > 1.f) {
-        gf = 1.f;
-    } else if (gf < 0.f) {
-        gf = 0.f;
-    }
-    if (bf > 1.f) {
-        bf = 1.f;
-    } else if (bf < 0.f) {
-        bf = 0.f;
-    }
-    return (struct pixel_t){
-        .r = rf * 20.f,
-        .g = gf * 10.f,
-        .b = bf * 10.f,
-    };
-}
-
-static struct pixel_t shader(int x, uint32_t t) {
-    uint8_t t8 = t;
-
-    
-    struct pixelf_t p = hsv2rgb((1.f / 1024.f) * t, 1.f, 1.f);
-
-    //{
-    //    .r = (1.f / 256.f) * t8,
-    //    .g = 0.f,
-    //    .b = 0.f,
-    //};
-
-    return convert_float_to_int(p);
-}
+#define CHANGE_PROBABILITY 0x3FFF
+#define SPARKLE_PROBABILITY 0x0F
+#define WHITE_SPARKLE_PROBABILITY 0x3FFF
+#define WHITE_DECAY 16
 
 int autorun(void) {
     //UINT n;
 
-    const int N = 500;
-
     uint32_t t = 0;
+
+    bool first = true;
+
+    static struct pixel_t buffer[N];
+    static uint8_t white_overlay[N];
+
+    int color_index = 0;
+    int rolling_refresh = 0;
+
     for(;;) {
         uint16_t lengths[8] = {3 * N, 0, 0, 0, 0, 0, 0, 0};
         memcpy(output_buffer, lengths, sizeof (lengths));
         uint8_t *output_buffer_ptr = &output_buffer[16];
+
+        // Randomly pick a color with some very small probability
+        if ((prng() & CHANGE_PROBABILITY) == 0) {
+            color_index = (color_index + 1) % N_COLORS;
+            rolling_refresh = 0;
+        }
+
+        // Sparkle to the new color
+        for(int x=0; x<rolling_refresh; x++) {
+            if (first || (prng() & SPARKLE_PROBABILITY) == 0) {
+                if (buffer[x].r != COLORS[color_index].r || buffer[x].g != COLORS[color_index].g || buffer[x].b != COLORS[color_index].b) {
+                    buffer[x] = COLORS[color_index];
+                    white_overlay[x] = 255;
+                }
+            }
+        }
+
         for(int x=0; x<N; x++) {
-            struct pixel_t p = shader(x, t);
+            // Sparkle white
+            if ((prng() & WHITE_SPARKLE_PROBABILITY) == 0) {
+                white_overlay[x] = 255;
+            }
+
+            // Composite
+            struct pixel_t p = buffer[x];
+            if (p.r < (white_overlay[x] >> 3)) {
+                p.r = (white_overlay[x] >> 3);
+            }
+            if (p.g < (white_overlay[x] >> 4)) {
+                p.g = (white_overlay[x] >> 4);
+            }
+            if (p.b < (white_overlay[x] >> 4)) {
+                p.b = (white_overlay[x] >> 4);
+            }
+
+            // Write to buffer
             *(output_buffer_ptr++) = p.r;
             *(output_buffer_ptr++) = p.g;
             *(output_buffer_ptr++) = p.b;
+
+            // Decay white overlay
+            if (white_overlay[x] > WHITE_DECAY) {
+                white_overlay[x] -= WHITE_DECAY;
+            } else {
+                white_overlay[x] = 0;
+            }
+        }
+        if (rolling_refresh < N) {
+            rolling_refresh++;
         }
         protocol_unpack_metadata();
         output_write();
         t++;
+        first = false;
     }
 }
 
